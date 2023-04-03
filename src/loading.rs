@@ -40,4 +40,6 @@ pub struct TextureAssets {
     pub texture_logo: Handle<Image>,
     #[asset(path = "textures/floor1-16x16.png")]
     pub floor1: Handle<Image>,
+    #[asset(path = "textures/bar-16x24.png")]
+    pub bar: Handle<Image>,
 }

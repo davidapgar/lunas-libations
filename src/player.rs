@@ -21,7 +21,11 @@ fn spawn_player(mut commands: Commands, textures: Res<TextureAssets>) {
     commands
         .spawn(SpriteBundle {
             texture: textures.texture_logo.clone(),
-            transform: Transform::from_translation(Vec3::new(0., 0., 2.0)),
+            transform: Transform::from_translation(Vec3::new(0., 0., 1.5)),
+            sprite: Sprite {
+                anchor: bevy::sprite::Anchor::BottomLeft,
+                ..default()
+            },
             ..Default::default()
         })
         .insert(Player);
