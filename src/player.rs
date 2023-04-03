@@ -1,5 +1,6 @@
 use crate::actions::Actions;
 use crate::loading::TextureAssets;
+use crate::world::{AsTile, Passable, Tile};
 use crate::GameState;
 use bevy::prelude::*;
 
@@ -34,7 +35,8 @@ fn spawn_player(mut commands: Commands, textures: Res<TextureAssets>) {
 fn move_player(
     time: Res<Time>,
     actions: Res<Actions>,
-    mut player_query: Query<&mut Transform, With<Player>>,
+    mut player_query: Query<&mut Transform, (With<Player>, Without<Tile>)>,
+    world_query: Query<(&Transform, &Tile), Without<Player>>,
 ) {
     if actions.player_movement.is_none() {
         return;
@@ -46,6 +48,21 @@ fn move_player(
         0.,
     );
     for mut player_transform in &mut player_query {
-        player_transform.translation += movement;
+        let new_translation = player_transform.translation + movement;
+        let new_tile = new_translation.as_tile();
+        if new_tile == player_transform.translation.as_tile() {
+            player_transform.translation += movement;
+            continue;
+        }
+
+        for (transform, passable) in &world_query {
+            let tile = transform.translation.as_tile();
+            if tile == new_tile {
+                if let Passable::Passable = passable.0 {
+                    player_transform.translation += movement;
+                }
+                break;
+            }
+        }
     }
 }
