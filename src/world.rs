@@ -37,37 +37,55 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
     for x in [-17., 16.] {
         spawn_floor(&mut commands, &textures, Vec3::new(x * 16., 16., 1.0));
     }
+    spawn_floor(&mut commands, &textures, Vec3::new(0., 48., 1.0));
 
     for x in (-16)..(16) {
         let x_coord = x as f32 * 16.0;
-        commands.spawn((
-            SpriteBundle {
-                texture: textures.bar.clone(),
-                transform: Transform::from_translation(Vec3::new(x_coord, 16., 2.0)),
-                sprite: Sprite {
-                    anchor: bevy::sprite::Anchor::BottomLeft,
-                    ..default()
-                },
-                ..default()
-            },
-            Tile(Passable::Blocking),
-        ));
+        spawn_tile(
+            &mut commands,
+            Vec3::new(x_coord, 16., 2.0),
+            textures.bar.clone(),
+            Passable::Blocking,
+        );
+    }
+
+    for x in (-16)..(16) {
+        let x_coord = x as f32 * 16.0;
+        spawn_tile(
+            &mut commands,
+            Vec3::new(x_coord, 48.0, 2.0),
+            textures.barback.clone(),
+            Passable::Blocking,
+        );
     }
 }
 
 fn spawn_floor(commands: &mut Commands, textures: &Res<TextureAssets>, translation: Vec3) {
+    spawn_tile(
+        commands,
+        translation,
+        textures.floor1.clone(),
+        Passable::Passable,
+    );
+}
+
+fn spawn_tile(
+    commands: &mut Commands,
+    translation: Vec3,
+    texture: Handle<Image>,
+    passable: Passable,
+) {
     commands.spawn((
         SpriteBundle {
-            texture: textures.floor1.clone(),
+            texture,
             transform: Transform::from_translation(translation),
             sprite: Sprite {
-                custom_size: Some(Vec2::splat(16.0)),
                 anchor: bevy::sprite::Anchor::BottomLeft,
                 ..default()
             },
             ..default()
         },
-        Tile::default(),
+        Tile(passable),
     ));
 }
 
