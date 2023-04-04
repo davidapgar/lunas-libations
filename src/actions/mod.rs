@@ -19,6 +19,7 @@ impl Plugin for ActionsPlugin {
 #[derive(Default, Resource)]
 pub struct Actions {
     pub player_movement: Option<Vec2>,
+    pub pick_up: bool,
 }
 
 pub fn set_movement_actions(mut actions: ResMut<Actions>, keyboard_input: Res<Input<KeyCode>>) {
@@ -34,4 +35,7 @@ pub fn set_movement_actions(mut actions: ResMut<Actions>, keyboard_input: Res<In
     } else {
         actions.player_movement = None;
     }
+
+    let grab = GameControl::Grab.pressed(&keyboard_input);
+    actions.pick_up = grab;
 }

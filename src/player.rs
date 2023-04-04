@@ -1,6 +1,6 @@
 use crate::actions::Actions;
 use crate::loading::TextureAssets;
-use crate::world::{AsTile, Passable, Tile, TileSpace, ToTileIndex};
+use crate::world::{AsTile, Passable, Tile, TileSpace, ToTileIndex, SCALE};
 use crate::GameState;
 use bevy::prelude::*;
 
@@ -22,7 +22,8 @@ fn spawn_player(mut commands: Commands, textures: Res<TextureAssets>) {
     commands
         .spawn(SpriteBundle {
             texture: textures.texture_logo.clone(),
-            transform: Transform::from_translation(IVec2::new(20, 19).as_tile().to_camera_space()),
+            transform: Transform::from_translation(IVec2::new(20, 19).as_tile().to_camera_space())
+                .with_scale(SCALE),
             sprite: Sprite {
                 anchor: bevy::sprite::Anchor::BottomLeft,
                 ..default()

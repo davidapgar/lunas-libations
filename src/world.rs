@@ -2,7 +2,8 @@ use crate::loading::TextureAssets;
 use crate::GameState;
 use bevy::prelude::*;
 
-pub const TILE_SIZE: f32 = 16.;
+pub const TILE_SIZE: f32 = 32.;
+pub const SCALE: Vec3 = Vec3::new(TILE_SIZE / 16., TILE_SIZE / 16., 1.0);
 pub const SCREEN_SIZE: Vec2 = Vec2::new(800., 600.);
 pub const WORLD_SIZE: IVec2 = IVec2::new(
     (SCREEN_SIZE.x / TILE_SIZE) as i32,
@@ -88,7 +89,7 @@ fn spawn_tile(
     commands.spawn((
         SpriteBundle {
             texture,
-            transform: Transform::from_translation(translation),
+            transform: Transform::from_translation(translation).with_scale(SCALE),
             sprite: Sprite {
                 anchor: bevy::sprite::Anchor::BottomLeft,
                 ..default()
