@@ -1,6 +1,6 @@
 use crate::actions::Actions;
 use crate::loading::TextureAssets;
-use crate::world::{AsTile, Passable, Tile};
+use crate::world::{AsTile, Passable, Tile, TileSpace, ToTileIndex};
 use crate::GameState;
 use bevy::prelude::*;
 
@@ -22,7 +22,7 @@ fn spawn_player(mut commands: Commands, textures: Res<TextureAssets>) {
     commands
         .spawn(SpriteBundle {
             texture: textures.texture_logo.clone(),
-            transform: Transform::from_translation(Vec3::new(0., 0., 1.5)),
+            transform: Transform::from_translation(IVec2::new(20, 19).as_tile().to_camera_space()),
             sprite: Sprite {
                 anchor: bevy::sprite::Anchor::BottomLeft,
                 ..default()
@@ -49,18 +49,18 @@ fn move_player(
     );
     for mut player_transform in &mut player_query {
         let new_translation = player_transform.translation + movement;
-        let new_tile = new_translation.as_tile();
-        if new_tile == player_transform.translation.as_tile() {
+        let new_tile = new_translation.to_tile_index();
+        if new_tile == player_transform.translation.to_tile_index() {
             player_transform.translation += movement;
             continue;
         }
 
         for (transform, passable) in &world_query {
-            let tile = transform.translation.as_tile();
+            let tile = transform.translation.to_tile_index();
             if tile == new_tile {
                 if let Passable::Passable = passable.0 {
                     player_transform.translation += movement;
-                    player_transform.translation.z = tile.z;
+                    player_transform.translation.z = new_tile.y as f32 + 0.5;
                 }
                 break;
             }

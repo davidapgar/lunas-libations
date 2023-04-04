@@ -2,6 +2,13 @@ use crate::loading::TextureAssets;
 use crate::GameState;
 use bevy::prelude::*;
 
+pub const TILE_SIZE: f32 = 16.;
+pub const SCREEN_SIZE: Vec2 = Vec2::new(800., 600.);
+pub const WORLD_SIZE: IVec2 = IVec2::new(
+    (SCREEN_SIZE.x / TILE_SIZE) as i32,
+    (SCREEN_SIZE.y / TILE_SIZE) as i32,
+);
+
 pub struct WorldPlugin;
 
 #[derive(Component, Default)]
@@ -27,7 +34,7 @@ impl Plugin for WorldPlugin {
 }
 
 fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
-    for y in 18..20 {
+    for y in 18..21 {
         for x in 0..50 {
             spawn_floor(&mut commands, &textures, IVec2::new(x, y));
         }
@@ -36,13 +43,13 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
     for x in 10..40 {
         spawn_tile(
             &mut commands,
-            IVec2::new(x, 20),
+            IVec2::new(x, 21),
             textures.bar.clone(),
             Passable::Blocking,
         );
     }
 
-    for y in 21..22 {
+    for y in 22..24 {
         for x in 0..50 {
             spawn_floor(&mut commands, &textures, IVec2::new(x, y));
         }
@@ -77,11 +84,7 @@ fn spawn_tile(
     texture: Handle<Image>,
     passable: Passable,
 ) {
-    let translation = Vec3::new(
-        (tile_location.x - 25) as f32 * 16.,
-        (20 - tile_location.y) as f32 * 16.,
-        tile_location.y as f32,
-    );
+    let translation = tile_location.as_tile().to_camera_space();
     commands.spawn((
         SpriteBundle {
             texture,
@@ -96,15 +99,55 @@ fn spawn_tile(
     ));
 }
 
+pub trait TileSpace {
+    fn to_tile_space(&self) -> Vec3;
+    fn to_camera_space(&self) -> Vec3;
+}
+
+impl TileSpace for Vec3 {
+    fn to_tile_space(&self) -> Vec3 {
+        Vec3::new(
+            self.x + (SCREEN_SIZE.x / 2.0),
+            (SCREEN_SIZE.y / 2.0) - self.y,
+            self.z,
+        )
+    }
+
+    fn to_camera_space(&self) -> Vec3 {
+        Vec3::new(
+            self.x - (SCREEN_SIZE.x / 2.0),
+            (SCREEN_SIZE.y / 2.0) - self.y,
+            self.z,
+        )
+    }
+}
+
 pub trait AsTile {
     fn as_tile(&self) -> Vec3;
+}
+
+pub trait ToTileIndex {
+    /// Convert from camera space to tile index.
+    fn to_tile_index(&self) -> IVec2;
 }
 // (20 - y) * 16 = tile_y (320 -> -320)
 // (20 - y) = tile_y / 16
 // 20 - (tile_y / 16) = y
 
-impl AsTile for Vec3 {
+impl ToTileIndex for Vec3 {
+    // Convert a vec3 from camera space to tile space to tile index
+    fn to_tile_index(&self) -> IVec2 {
+        (self.to_tile_space() / TILE_SIZE).as_ivec3().truncate()
+    }
+}
+
+impl AsTile for IVec2 {
+    // Convert from tile index into coordinates in tile space
     fn as_tile(&self) -> Vec3 {
-        Vec3::new(self.x / 16., self.y / 16., 20. - (self.y / 16.)).floor()
+        Vec3::new(
+            self.x as f32 * TILE_SIZE,
+            self.y as f32 * TILE_SIZE,
+            self.y as f32,
+        )
     }
 }
