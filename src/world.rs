@@ -27,6 +27,7 @@ impl Default for Passable {
 }
 
 // World is 50x40 tiles (800x600 configured window size).
+// Actual 25x20'ish, as have scaled all assets to 2x for better visibilty
 
 impl Plugin for WorldPlugin {
     fn build(&self, app: &mut App) {
@@ -35,34 +36,41 @@ impl Plugin for WorldPlugin {
 }
 
 fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
-    for y in 18..21 {
-        for x in 0..50 {
+    for x in 4..20 {
+        spawn_tile(
+            &mut commands,
+            IVec2::new(x, 4),
+            textures.barback.clone(),
+            Passable::Blocking,
+        );
+    }
+
+    for y in 5..10 {
+        for x in 0..24 {
             spawn_floor(&mut commands, &textures, IVec2::new(x, y));
         }
     }
 
-    for x in 10..40 {
+    for x in 4..20 {
         spawn_tile(
             &mut commands,
-            IVec2::new(x, 21),
+            IVec2::new(x, 10),
             textures.bar.clone(),
             Passable::Blocking,
         );
     }
 
-    for y in 22..24 {
-        for x in 0..50 {
-            spawn_floor(&mut commands, &textures, IVec2::new(x, y));
-        }
+    for x in 0..4 {
+        spawn_floor(&mut commands, &textures, IVec2::new(x, 10));
+    }
+    for x in 20..24 {
+        spawn_floor(&mut commands, &textures, IVec2::new(x, 10));
     }
 
-    for x in 10..40 {
-        spawn_tile(
-            &mut commands,
-            IVec2::new(x, 17),
-            textures.barback.clone(),
-            Passable::Blocking,
-        );
+    for y in 11..20 {
+        for x in 0..24 {
+            spawn_floor(&mut commands, &textures, IVec2::new(x, y));
+        }
     }
 }
 

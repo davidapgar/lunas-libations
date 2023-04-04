@@ -7,14 +7,23 @@ use bevy::prelude::*;
 pub struct PlayerPlugin;
 
 #[derive(Component)]
-pub struct Player;
+pub struct Player {
+    holding: Option<Entity>,
+}
+
+impl Default for Player {
+    fn default() -> Self {
+        Player { holding: None }
+    }
+}
 
 /// This plugin handles player related stuff like movement
 /// Player logic is only active during the State `GameState::Playing`
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_system(spawn_player.in_schedule(OnEnter(GameState::Playing)))
-            .add_system(move_player.in_set(OnUpdate(GameState::Playing)));
+            .add_system(move_player.in_set(OnUpdate(GameState::Playing)))
+            .add_system(player_pickup.in_set(OnUpdate(GameState::Playing)));
     }
 }
 
@@ -22,7 +31,7 @@ fn spawn_player(mut commands: Commands, textures: Res<TextureAssets>) {
     commands
         .spawn(SpriteBundle {
             texture: textures.texture_logo.clone(),
-            transform: Transform::from_translation(IVec2::new(20, 19).as_tile().to_camera_space())
+            transform: Transform::from_translation(IVec2::new(12, 9).as_tile().to_camera_space())
                 .with_scale(SCALE),
             sprite: Sprite {
                 anchor: bevy::sprite::Anchor::BottomLeft,
@@ -30,7 +39,7 @@ fn spawn_player(mut commands: Commands, textures: Res<TextureAssets>) {
             },
             ..Default::default()
         })
-        .insert(Player);
+        .insert(Player::default());
 }
 
 fn move_player(
@@ -65,6 +74,38 @@ fn move_player(
                 }
                 break;
             }
+        }
+    }
+}
+
+fn player_pickup(
+    mut commands: Commands,
+    textures: Res<TextureAssets>,
+    actions: Res<Actions>,
+    mut player_query: Query<(Entity, &mut Player)>,
+) {
+    if actions.pick_up.0 == true && actions.pick_up.1 == false {
+        let (entity, mut player) = player_query.single_mut();
+
+        if let Some(holding) = player.holding {
+            commands.entity(entity).remove_children(&[holding]);
+            commands.entity(holding).despawn();
+            player.holding = None;
+        } else {
+            let orange = commands
+                .spawn(SpriteBundle {
+                    texture: textures.orange.clone(),
+                    transform: Transform::from_translation(Vec3::new(8.0, 24., 1.)),
+                    sprite: Sprite {
+                        anchor: bevy::sprite::Anchor::BottomLeft,
+                        ..default()
+                    },
+                    ..default()
+                })
+                .id();
+
+            commands.entity(entity).push_children(&[orange]);
+            player.holding = Some(orange);
         }
     }
 }
