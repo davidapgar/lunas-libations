@@ -60,6 +60,7 @@ fn move_player(
             if tile == new_tile {
                 if let Passable::Passable = passable.0 {
                     player_transform.translation += movement;
+                    player_transform.translation.z = tile.z;
                 }
                 break;
             }

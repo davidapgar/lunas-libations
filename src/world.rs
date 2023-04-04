@@ -27,54 +27,61 @@ impl Plugin for WorldPlugin {
 }
 
 fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
-    for y in [0.0, 32.0] {
-        for x in (-17)..(17) {
-            let x_coord = x as f32 * 16.0;
-            spawn_floor(&mut commands, &textures, Vec3::new(x_coord, y, 1.0));
+    for y in 18..20 {
+        for x in 0..50 {
+            spawn_floor(&mut commands, &textures, IVec2::new(x, y));
         }
     }
 
-    for x in [-17., 16.] {
-        spawn_floor(&mut commands, &textures, Vec3::new(x * 16., 16., 1.0));
-    }
-    spawn_floor(&mut commands, &textures, Vec3::new(0., 48., 1.0));
-
-    for x in (-16)..(16) {
-        let x_coord = x as f32 * 16.0;
+    for x in 10..40 {
         spawn_tile(
             &mut commands,
-            Vec3::new(x_coord, 16., 2.0),
+            IVec2::new(x, 20),
             textures.bar.clone(),
             Passable::Blocking,
         );
     }
 
-    for x in (-16)..(16) {
-        let x_coord = x as f32 * 16.0;
+    for y in 21..22 {
+        for x in 0..50 {
+            spawn_floor(&mut commands, &textures, IVec2::new(x, y));
+        }
+    }
+
+    for x in 10..40 {
         spawn_tile(
             &mut commands,
-            Vec3::new(x_coord, 48.0, 2.0),
+            IVec2::new(x, 17),
             textures.barback.clone(),
             Passable::Blocking,
         );
     }
 }
 
-fn spawn_floor(commands: &mut Commands, textures: &Res<TextureAssets>, translation: Vec3) {
+fn spawn_floor(commands: &mut Commands, textures: &Res<TextureAssets>, tile_location: IVec2) {
     spawn_tile(
         commands,
-        translation,
+        tile_location,
         textures.floor1.clone(),
         Passable::Passable,
     );
 }
 
+// Camera defaults to center of screen being 0.0/0.0
+// So tile 0,0 (top left) will be at -25*16/20*16
+// tile 50,40 will be at 25*16/-20*16
+// tile at 25,20 will be at 0/0
 fn spawn_tile(
     commands: &mut Commands,
-    translation: Vec3,
+    tile_location: IVec2,
     texture: Handle<Image>,
     passable: Passable,
 ) {
+    let translation = Vec3::new(
+        (tile_location.x - 25) as f32 * 16.,
+        (20 - tile_location.y) as f32 * 16.,
+        tile_location.y as f32,
+    );
     commands.spawn((
         SpriteBundle {
             texture,
@@ -92,9 +99,12 @@ fn spawn_tile(
 pub trait AsTile {
     fn as_tile(&self) -> Vec3;
 }
+// (20 - y) * 16 = tile_y (320 -> -320)
+// (20 - y) = tile_y / 16
+// 20 - (tile_y / 16) = y
 
 impl AsTile for Vec3 {
     fn as_tile(&self) -> Vec3 {
-        Vec3::new(self.x / 16., self.y / 16., self.z).floor()
+        Vec3::new(self.x / 16., self.y / 16., 20. - (self.y / 16.)).floor()
     }
 }
