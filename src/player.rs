@@ -23,22 +23,9 @@ impl Player {
         entity: Entity,
         item: Item,
         commands: &mut Commands,
-        textures: Res<TextureAssets>,
+        textures: &Res<TextureAssets>,
     ) {
-        let item_id = commands
-            .spawn((
-                SpriteBundle {
-                    texture: item.texture(textures),
-                    transform: Transform::from_translation(Vec3::new(8.0, 24., 1.)),
-                    sprite: Sprite {
-                        anchor: bevy::sprite::Anchor::BottomLeft,
-                        ..default()
-                    },
-                    ..default()
-                },
-                item,
-            ))
-            .id();
+        let item_id = item.spawn(Vec3::new(8.0, 24., 1.), commands, textures);
         commands.entity(entity).push_children(&[item_id]);
         self.holding = Some(item_id);
     }
@@ -51,11 +38,34 @@ pub enum Item {
 }
 
 impl Item {
-    fn texture(&self, texture_assets: Res<TextureAssets>) -> Handle<Image> {
+    fn texture(&self, texture_assets: &Res<TextureAssets>) -> Handle<Image> {
         match self {
             Item::Orange => texture_assets.orange.clone(),
             Item::Banana => texture_assets.banana.clone(),
         }
+    }
+
+    pub fn spawn(
+        self,
+        translation: Vec3,
+        commands: &mut Commands,
+        textures: &Res<TextureAssets>,
+    ) -> Entity {
+        let item_id = commands
+            .spawn((
+                SpriteBundle {
+                    texture: self.texture(textures),
+                    transform: Transform::from_translation(translation),
+                    sprite: Sprite {
+                        anchor: bevy::sprite::Anchor::BottomLeft,
+                        ..default()
+                    },
+                    ..default()
+                },
+                self,
+            ))
+            .id();
+        item_id
     }
 }
 
@@ -135,7 +145,7 @@ fn player_pickup(
             commands.entity(holding).despawn();
             player.holding = None;
         } else {
-            player.hold_item(entity, Item::Banana, &mut commands, textures);
+            player.hold_item(entity, Item::Banana, &mut commands, &textures);
         }
     }
 }

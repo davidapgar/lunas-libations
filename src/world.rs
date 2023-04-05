@@ -1,4 +1,5 @@
 use crate::loading::TextureAssets;
+use crate::player::Item;
 use crate::GameState;
 use bevy::prelude::*;
 
@@ -47,7 +48,11 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
 
     for y in 5..10 {
         for x in 0..24 {
-            spawn_floor(&mut commands, &textures, IVec2::new(x, y));
+            let id = spawn_floor(&mut commands, &textures, IVec2::new(x, y));
+            if y == 6 && x == 12 {
+                let orange = Item::Orange.spawn(Vec3::new(0., 0., 0.5), &mut commands, &textures);
+                commands.entity(id).add_child(orange);
+            }
         }
     }
 
@@ -74,13 +79,17 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
     }
 }
 
-fn spawn_floor(commands: &mut Commands, textures: &Res<TextureAssets>, tile_location: IVec2) {
+fn spawn_floor(
+    commands: &mut Commands,
+    textures: &Res<TextureAssets>,
+    tile_location: IVec2,
+) -> Entity {
     spawn_tile(
         commands,
         tile_location,
         textures.floor1.clone(),
         Passable::Passable,
-    );
+    )
 }
 
 // Camera defaults to center of screen being 0.0/0.0
@@ -92,20 +101,22 @@ fn spawn_tile(
     tile_location: IVec2,
     texture: Handle<Image>,
     passable: Passable,
-) {
+) -> Entity {
     let translation = tile_location.as_tile().to_camera_space();
-    commands.spawn((
-        SpriteBundle {
-            texture,
-            transform: Transform::from_translation(translation).with_scale(SCALE),
-            sprite: Sprite {
-                anchor: bevy::sprite::Anchor::BottomLeft,
+    commands
+        .spawn((
+            SpriteBundle {
+                texture,
+                transform: Transform::from_translation(translation).with_scale(SCALE),
+                sprite: Sprite {
+                    anchor: bevy::sprite::Anchor::BottomLeft,
+                    ..default()
+                },
                 ..default()
             },
-            ..default()
-        },
-        Tile(passable),
-    ));
+            Tile(passable),
+        ))
+        .id()
 }
 
 pub trait TileSpace {
