@@ -52,7 +52,7 @@ default = [
 [dependencies]
 bevy = { version = "0.10", default-features = false }
 bevy_kira_audio = { version = "0.15" }
-bevy_asset_loader = { version = "0.15" }
+bevy_asset_loader = { version = "0.15", features = ["2d"] }
 rand = { version = "0.8.3" }
 
 # keep the following in sync with Bevy's dependencies

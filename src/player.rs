@@ -74,14 +74,15 @@ impl Plugin for PlayerPlugin {
 
 fn spawn_player(mut commands: Commands, textures: Res<TextureAssets>) {
     commands
-        .spawn(SpriteBundle {
-            texture: textures.texture_logo.clone(),
-            transform: Transform::from_translation(IVec2::new(12, 9).as_tile().to_camera_space())
-                .with_scale(SCALE),
-            sprite: Sprite {
+        .spawn(SpriteSheetBundle {
+            texture_atlas: textures.luna.clone(),
+            sprite: TextureAtlasSprite {
+                index: 0,
                 anchor: bevy::sprite::Anchor::BottomLeft,
                 ..default()
             },
+            transform: Transform::from_translation(IVec2::new(12, 9).as_tile().to_camera_space())
+                .with_scale(SCALE),
             ..Default::default()
         })
         .insert(Player::default());
@@ -129,13 +130,13 @@ fn player_pickup(
     actions: Res<Actions>,
     mut player_query: Query<(Entity, &Transform, &mut Player), Without<Tile>>,
     tile_query: Query<
-        (Entity, &Transform, &Children),
+        (Entity, &Transform, Option<&Children>),
         (With<Tile>, Without<Player>, Without<Item>),
     >,
     mut item_query: Query<(Entity, &mut Transform, &Item), (Without<Player>, Without<Tile>)>,
 ) {
     if actions.pick_up.0 == true && actions.pick_up.1 == false {
-        let (entity, transform, mut player) = player_query.single_mut();
+        let (player_entity, transform, mut player) = player_query.single_mut();
 
         if let Some(holding) = player.holding {
             commands.entity(holding).remove_parent();
@@ -143,27 +144,34 @@ fn player_pickup(
 
             let player_tile = transform.translation.to_tile_index();
             if let Some(tile_entity) = tile_at(player_tile, &tile_query) {
+                println!("Drop on tile");
+                let (_, mut item_transform, _) = item_query.get_mut(holding).unwrap();
+                item_transform.translation = Vec3::new(0., 0., 0.5);
                 commands.entity(tile_entity).add_child(holding);
             } else {
+                println!("despawn");
                 commands.entity(holding).despawn();
             }
         } else {
             if let Some(tile_entity) = tile_at(transform.translation.to_tile_index(), &tile_query) {
-                let (_, _transform, children) = tile_query.get(tile_entity).unwrap();
-                for child in children.iter() {
-                    if let Ok((_, mut item_transform, _item)) = item_query.get_mut(*child) {
-                        item_transform.translation = Vec3::new(0., 0., 0.5);
-                        commands.entity(*child).remove_parent();
-                        commands.entity(tile_entity).add_child(*child);
-                        player.holding = Some(*child);
-                        return;
+                if let Ok((_, _, Some(children))) = tile_query.get(tile_entity) {
+                    for child in children.iter() {
+                        if let Ok((_, mut item_transform, _item)) = item_query.get_mut(*child) {
+                            println!("pickup");
+                            item_transform.translation = Vec3::new(12., 16., 0.5);
+                            commands.entity(*child).remove_parent();
+                            commands.entity(player_entity).add_child(*child);
+                            player.holding = Some(*child);
+                            return;
+                        }
                     }
                 }
-            } else {
-                let item_entity =
-                    Item::Banana.spawn(Vec3::new(12., 16., 0.5), &mut commands, &textures);
-                player.hold_item(entity, item_entity, &mut commands);
             }
+
+            println!("spawn");
+            let item_entity =
+                Item::Banana.spawn(Vec3::new(12., 16., 0.5), &mut commands, &textures);
+            player.hold_item(player_entity, item_entity, &mut commands);
         }
     }
 }
@@ -171,7 +179,7 @@ fn player_pickup(
 fn tile_at(
     tile_index: IVec2,
     tile_query: &Query<
-        (Entity, &Transform, &Children),
+        (Entity, &Transform, Option<&Children>),
         (With<Tile>, Without<Player>, Without<Item>),
     >,
 ) -> Option<Entity> {
