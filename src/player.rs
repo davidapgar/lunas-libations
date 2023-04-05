@@ -17,6 +17,34 @@ impl Default for Player {
     }
 }
 
+impl Player {
+    fn hold_item(
+        &mut self,
+        entity: Entity,
+        item: Item,
+        commands: &mut Commands,
+        textures: Res<TextureAssets>,
+    ) {
+        let item_id = commands
+            .spawn((
+                SpriteBundle {
+                    texture: item.texture(textures),
+                    transform: Transform::from_translation(Vec3::new(8.0, 24., 1.)),
+                    sprite: Sprite {
+                        anchor: bevy::sprite::Anchor::BottomLeft,
+                        ..default()
+                    },
+                    ..default()
+                },
+                item,
+            ))
+            .id();
+        commands.entity(entity).push_children(&[item_id]);
+        self.holding = Some(item_id);
+    }
+}
+
+#[derive(Component)]
 pub enum Item {
     Orange,
     Banana,
@@ -96,30 +124,18 @@ fn player_pickup(
     mut commands: Commands,
     textures: Res<TextureAssets>,
     actions: Res<Actions>,
-    mut player_query: Query<(Entity, &mut Player)>,
+    mut player_query: Query<(Entity, &Transform, &mut Player), Without<Tile>>,
+    mut world_query: Query<(Entity, &mut Transform), (With<Tile>, Without<Player>)>,
 ) {
     if actions.pick_up.0 == true && actions.pick_up.1 == false {
-        let (entity, mut player) = player_query.single_mut();
+        let (entity, transform, mut player) = player_query.single_mut();
 
         if let Some(holding) = player.holding {
             commands.entity(entity).remove_children(&[holding]);
             commands.entity(holding).despawn();
             player.holding = None;
         } else {
-            let orange = commands
-                .spawn(SpriteBundle {
-                    texture: Item::Banana.texture(textures),
-                    transform: Transform::from_translation(Vec3::new(8.0, 24., 1.)),
-                    sprite: Sprite {
-                        anchor: bevy::sprite::Anchor::BottomLeft,
-                        ..default()
-                    },
-                    ..default()
-                })
-                .id();
-
-            commands.entity(entity).push_children(&[orange]);
-            player.holding = Some(orange);
+            player.hold_item(entity, Item::Banana, &mut commands, textures);
         }
     }
 }
