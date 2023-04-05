@@ -128,7 +128,11 @@ fn player_pickup(
     textures: Res<TextureAssets>,
     actions: Res<Actions>,
     mut player_query: Query<(Entity, &Transform, &mut Player), Without<Tile>>,
-    mut world_query: Query<(Entity, &Transform), (With<Tile>, Without<Player>)>,
+    tile_query: Query<
+        (Entity, &Transform, &Children),
+        (With<Tile>, Without<Player>, Without<Item>),
+    >,
+    mut item_query: Query<(Entity, &mut Transform, &Item), (Without<Player>, Without<Tile>)>,
 ) {
     if actions.pick_up.0 == true && actions.pick_up.1 == false {
         let (entity, transform, mut player) = player_query.single_mut();
@@ -138,17 +142,43 @@ fn player_pickup(
             player.holding = None;
 
             let player_tile = transform.translation.to_tile_index();
-            for (tile_entity, tile_transform) in &world_query {
-                if tile_transform.translation.to_tile_index() == player_tile {
-                    commands.entity(tile_entity).add_child(holding);
-                    return;
-                }
+            if let Some(tile_entity) = tile_at(player_tile, &tile_query) {
+                commands.entity(tile_entity).add_child(holding);
+            } else {
+                commands.entity(holding).despawn();
             }
-            commands.entity(holding).despawn();
         } else {
-            let item_entity =
-                Item::Banana.spawn(Vec3::new(12., 16., 0.5), &mut commands, &textures);
-            player.hold_item(entity, item_entity, &mut commands);
+            if let Some(tile_entity) = tile_at(transform.translation.to_tile_index(), &tile_query) {
+                let (_, _transform, children) = tile_query.get(tile_entity).unwrap();
+                for child in children.iter() {
+                    if let Ok((_, mut item_transform, _item)) = item_query.get_mut(*child) {
+                        item_transform.translation = Vec3::new(0., 0., 0.5);
+                        commands.entity(*child).remove_parent();
+                        commands.entity(tile_entity).add_child(*child);
+                        player.holding = Some(*child);
+                        return;
+                    }
+                }
+            } else {
+                let item_entity =
+                    Item::Banana.spawn(Vec3::new(12., 16., 0.5), &mut commands, &textures);
+                player.hold_item(entity, item_entity, &mut commands);
+            }
         }
     }
+}
+
+fn tile_at(
+    tile_index: IVec2,
+    tile_query: &Query<
+        (Entity, &Transform, &Children),
+        (With<Tile>, Without<Player>, Without<Item>),
+    >,
+) -> Option<Entity> {
+    for (entity, transform, _) in tile_query {
+        if transform.translation.to_tile_index() == tile_index {
+            return Some(entity);
+        }
+    }
+    None
 }
