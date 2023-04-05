@@ -17,6 +17,20 @@ impl Default for Player {
     }
 }
 
+pub enum Item {
+    Orange,
+    Banana,
+}
+
+impl Item {
+    fn texture(&self, texture_assets: Res<TextureAssets>) -> Handle<Image> {
+        match self {
+            Item::Orange => texture_assets.orange.clone(),
+            Item::Banana => texture_assets.banana.clone(),
+        }
+    }
+}
+
 /// This plugin handles player related stuff like movement
 /// Player logic is only active during the State `GameState::Playing`
 impl Plugin for PlayerPlugin {
@@ -94,7 +108,7 @@ fn player_pickup(
         } else {
             let orange = commands
                 .spawn(SpriteBundle {
-                    texture: textures.orange.clone(),
+                    texture: Item::Banana.texture(textures),
                     transform: Transform::from_translation(Vec3::new(8.0, 24., 1.)),
                     sprite: Sprite {
                         anchor: bevy::sprite::Anchor::BottomLeft,
