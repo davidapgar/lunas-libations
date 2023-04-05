@@ -128,15 +128,23 @@ fn player_pickup(
     textures: Res<TextureAssets>,
     actions: Res<Actions>,
     mut player_query: Query<(Entity, &Transform, &mut Player), Without<Tile>>,
-    mut world_query: Query<(Entity, &mut Transform), (With<Tile>, Without<Player>)>,
+    mut world_query: Query<(Entity, &Transform), (With<Tile>, Without<Player>)>,
 ) {
     if actions.pick_up.0 == true && actions.pick_up.1 == false {
         let (entity, transform, mut player) = player_query.single_mut();
 
         if let Some(holding) = player.holding {
-            commands.entity(entity).remove_children(&[holding]);
-            commands.entity(holding).despawn();
+            commands.entity(holding).remove_parent();
             player.holding = None;
+
+            let player_tile = transform.translation.to_tile_index();
+            for (tile_entity, tile_transform) in &world_query {
+                if tile_transform.translation.to_tile_index() == player_tile {
+                    commands.entity(tile_entity).add_child(holding);
+                    return;
+                }
+            }
+            commands.entity(holding).despawn();
         } else {
             let item_entity =
                 Item::Banana.spawn(Vec3::new(12., 16., 0.5), &mut commands, &textures);
