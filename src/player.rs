@@ -18,16 +18,9 @@ impl Default for Player {
 }
 
 impl Player {
-    fn hold_item(
-        &mut self,
-        entity: Entity,
-        item: Item,
-        commands: &mut Commands,
-        textures: &Res<TextureAssets>,
-    ) {
-        let item_id = item.spawn(Vec3::new(8.0, 24., 1.), commands, textures);
-        commands.entity(entity).push_children(&[item_id]);
-        self.holding = Some(item_id);
+    fn hold_item(&mut self, player_entity: Entity, item_entity: Entity, commands: &mut Commands) {
+        commands.entity(player_entity).add_child(item_entity);
+        self.holding = Some(item_entity);
     }
 }
 
@@ -145,7 +138,9 @@ fn player_pickup(
             commands.entity(holding).despawn();
             player.holding = None;
         } else {
-            player.hold_item(entity, Item::Banana, &mut commands, &textures);
+            let item_entity =
+                Item::Banana.spawn(Vec3::new(12., 16., 0.5), &mut commands, &textures);
+            player.hold_item(entity, item_entity, &mut commands);
         }
     }
 }
