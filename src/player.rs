@@ -91,7 +91,10 @@ fn spawn_player(mut commands: Commands, textures: Res<TextureAssets>) {
 fn move_player(
     time: Res<Time>,
     actions: Res<Actions>,
-    mut player_query: Query<&mut Transform, (With<Player>, Without<Tile>)>,
+    mut player_query: Query<
+        (&mut Transform, &mut TextureAtlasSprite),
+        (With<Player>, Without<Tile>),
+    >,
     world_query: Query<(&Transform, &Tile), Without<Player>>,
 ) {
     if actions.player_movement.is_none() {
@@ -103,7 +106,20 @@ fn move_player(
         actions.player_movement.unwrap().y * speed * time.delta_seconds(),
         0.,
     );
-    for mut player_transform in &mut player_query {
+    for (mut player_transform, mut sprite) in &mut player_query {
+        sprite.index = {
+            if movement.y < 0. {
+                0
+            } else if movement.y > 0. {
+                1
+            } else if movement.x < 0. {
+                2
+            } else if movement.x > 0. {
+                3
+            } else {
+                0
+            }
+        };
         let new_translation = player_transform.translation + movement;
         let new_tile = new_translation.to_tile_index();
         if new_tile == player_transform.translation.to_tile_index() {
