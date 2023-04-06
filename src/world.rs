@@ -47,11 +47,14 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
     }
 
     for y in 5..10 {
-        for x in 0..24 {
+        for x in 2..24 {
             let id = spawn_floor(&mut commands, &textures, IVec2::new(x, y));
             if y == 6 && x == 12 {
                 let orange = Item::Orange.spawn(Vec3::new(0., 0., 0.5), &mut commands, &textures);
                 commands.entity(id).add_child(orange);
+            } else if y == 8 && x == 28 {
+                let banana = Item::Banana.spawn(Vec3::new(0., 0., 0.5), &mut commands, &textures);
+                commands.entity(id).add_child(banana);
             }
         }
     }
@@ -65,15 +68,15 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
         );
     }
 
-    for x in 0..4 {
+    for x in 2..4 {
         spawn_floor(&mut commands, &textures, IVec2::new(x, 10));
     }
     for x in 20..24 {
         spawn_floor(&mut commands, &textures, IVec2::new(x, 10));
     }
 
-    for y in 11..20 {
-        for x in 0..24 {
+    for y in 11..18 {
+        for x in 2..24 {
             spawn_floor(&mut commands, &textures, IVec2::new(x, y));
         }
     }
