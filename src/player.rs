@@ -117,9 +117,13 @@ impl Item {
         textures: &Res<TextureAssets>,
         commands: &mut Commands,
     ) -> Entity {
-        commands.entity(entity).remove_parent();
-
-        entity
+        match self {
+            Item::Spawner => Item::Banana.spawn(Vec3::new(0., 0., 0.5), commands, textures),
+            _ => {
+                commands.entity(entity).remove_parent();
+                entity
+            }
+        }
     }
 }
 
