@@ -88,6 +88,10 @@ impl TileMap {
         )
     }
 
+    pub fn camera_to_tile(&self, origin: Vec3, point: Vec3) -> IVec2 {
+        self.to_tile(self.to_tile_space(origin, point))
+    }
+
     pub fn tile_at(&self, point: IVec2) -> Option<Entity> {
         if point.x < 0 || point.x >= self.size.x {
             None
