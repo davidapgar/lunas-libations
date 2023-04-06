@@ -1,5 +1,6 @@
 use crate::loading::TextureAssets;
 use crate::player::Item;
+use crate::tilemap::TileMap;
 use crate::GameState;
 use bevy::prelude::*;
 
@@ -32,23 +33,51 @@ impl Default for Passable {
 
 impl Plugin for WorldPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(spawn_world_tiles.in_schedule(OnEnter(GameState::Playing)));
+        app.add_system(spawn_world_tiles.in_schedule(OnEnter(GameState::Playing)))
+            .add_system(update_tile_positions.in_set(OnUpdate(GameState::Playing)));
     }
 }
 
+fn update_tile_positions(
+    tile_map_query: Query<&TileMap>,
+    mut transform_query: Query<&mut Transform, Without<TileMap>>,
+) {
+    let tile_map = tile_map_query.single();
+
+    tile_map.transform_tiles(&mut transform_query);
+}
+
 fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
+    // Spawn the entity early, so we can add children.
+    let tile_map_id = commands
+        .spawn(SpatialBundle {
+            transform: Transform::from_translation(Vec3::new(
+                -1. * SCREEN_SIZE.x / 2.,
+                -1. * SCREEN_SIZE.y / 2.,
+                1.0,
+            ))
+            .with_scale(Vec3::new(2., 2., 1.)),
+            ..default()
+        })
+        .id();
+
+    let mut tile_map = TileMap::new(WORLD_SIZE, IVec2::new(16, 16));
+
     for x in 4..20 {
-        spawn_tile(
+        let position = IVec2::new(x, 4);
+        let id = spawn_tile(
             &mut commands,
-            IVec2::new(x, 4),
+            position,
             textures.barback.clone(),
             Passable::Blocking,
         );
+        tile_map.insert(tile_map_id, id, position, &mut commands);
     }
 
     for y in 5..10 {
         for x in 2..24 {
-            let id = spawn_floor(&mut commands, &textures, IVec2::new(x, y));
+            let position = IVec2::new(x, y);
+            let id = spawn_floor(&mut commands, &textures, position);
             if y == 6 && x == 12 {
                 let orange = Item::Orange.spawn(Vec3::new(0., 0., 0.5), &mut commands, &textures);
                 commands.entity(id).add_child(orange);
@@ -56,30 +85,58 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
                 let banana = Item::Banana.spawn(Vec3::new(0., 0., 0.5), &mut commands, &textures);
                 commands.entity(id).add_child(banana);
             }
+            tile_map.insert(tile_map_id, id, position, &mut commands);
         }
     }
 
     for x in 4..20 {
-        spawn_tile(
+        let position = IVec2::new(x, 10);
+        tile_map.insert(
+            tile_map_id,
+            spawn_tile(
+                &mut commands,
+                position,
+                textures.bar.clone(),
+                Passable::Blocking,
+            ),
+            position,
             &mut commands,
-            IVec2::new(x, 10),
-            textures.bar.clone(),
-            Passable::Blocking,
         );
     }
 
     for x in 2..4 {
-        spawn_floor(&mut commands, &textures, IVec2::new(x, 10));
+        let position = IVec2::new(x, 10);
+        tile_map.insert(
+            tile_map_id,
+            spawn_floor(&mut commands, &textures, position),
+            position,
+            &mut commands,
+        );
     }
     for x in 20..24 {
-        spawn_floor(&mut commands, &textures, IVec2::new(x, 10));
+        let position = IVec2::new(x, 10);
+        tile_map.insert(
+            tile_map_id,
+            spawn_floor(&mut commands, &textures, position),
+            position,
+            &mut commands,
+        );
     }
 
     for y in 11..18 {
         for x in 2..24 {
-            spawn_floor(&mut commands, &textures, IVec2::new(x, y));
+            let position = IVec2::new(x, y);
+            tile_map.insert(
+                tile_map_id,
+                spawn_floor(&mut commands, &textures, position),
+                position,
+                &mut commands,
+            );
         }
     }
+
+    // Add the tilemap component to the tilemap entity
+    commands.entity(tile_map_id).insert(tile_map);
 }
 
 fn spawn_floor(
@@ -110,7 +167,7 @@ fn spawn_tile(
         .spawn((
             SpriteBundle {
                 texture,
-                transform: Transform::from_translation(translation).with_scale(SCALE),
+                transform: Transform::from_translation(translation),
                 sprite: Sprite {
                     anchor: bevy::sprite::Anchor::BottomLeft,
                     ..default()

@@ -44,8 +44,8 @@ impl TileMap {
         self.tiles[tile_index] = Some(entity);
     }
 
-    fn transform_tiles(&self, commands: &Commands, query: &mut Query<&mut Transform>) {
-        let height = self.size.y * self.tile_size.y;
+    pub fn transform_tiles(&self, query: &mut Query<&mut Transform, Without<TileMap>>) {
+        let height = self.height();
 
         for x in 0..self.size.x {
             for y in 0..self.size.y {
@@ -62,5 +62,9 @@ impl TileMap {
                 }
             }
         }
+    }
+
+    fn height(&self) -> i32 {
+        (self.size.y - 1) * self.tile_size.y
     }
 }
