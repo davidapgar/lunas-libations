@@ -61,7 +61,7 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
         })
         .id();
 
-    let mut tile_map = TileMap::new(WORLD_SIZE, IVec2::new(16, 16));
+    let mut tile_map = TileMap::new(WORLD_SIZE, IVec2::new(16, 16), IVec2::new(2, 2));
 
     for x in 4..20 {
         let position = IVec2::new(x, 4);

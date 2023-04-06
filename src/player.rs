@@ -1,5 +1,6 @@
 use crate::actions::Actions;
 use crate::loading::TextureAssets;
+use crate::tilemap::TileMap;
 use crate::world::{AsTile, Passable, Tile, TileSpace, ToTileIndex, SCALE};
 use crate::GameState;
 use bevy::prelude::*;
@@ -129,10 +130,13 @@ fn move_player(
     actions: Res<Actions>,
     mut player_query: Query<
         (&mut Transform, &mut TextureAtlasSprite, &mut Player),
-        (Without<Tile>, Without<Item>),
+        (Without<Tile>, Without<Item>, Without<TileMap>),
     >,
-    world_query: Query<(&Transform, &Tile), Without<Player>>,
+    tile_map_query: Query<(&TileMap, &Transform), (With<TileMap>, Without<Player>)>,
+    tile_query: Query<(&Tile, &Transform)>,
 ) {
+    let (tile_map, tile_map_transform) = tile_map_query.single();
+
     if actions.player_movement.is_none() {
         return;
     }
@@ -147,20 +151,24 @@ fn move_player(
         sprite.index = player.heading.sprite_index();
 
         let new_translation = player_transform.translation + movement;
-        let new_tile = new_translation.to_tile_index();
-        if new_tile == player_transform.translation.to_tile_index() {
+        let new_tile = tile_map
+            .to_tile(tile_map.to_tile_space(tile_map_transform.translation, new_translation));
+        if new_tile
+            == tile_map.to_tile(
+                tile_map
+                    .to_tile_space(tile_map_transform.translation, player_transform.translation),
+            )
+        {
             player_transform.translation += movement;
             continue;
         }
 
-        for (transform, passable) in &world_query {
-            let tile = transform.translation.to_tile_index();
-            if tile == new_tile {
-                if let Passable::Passable = passable.0 {
+        if let Some(tile_entity) = tile_map.tile_at(new_tile) {
+            if let Ok((tile, _transform)) = tile_query.get(tile_entity) {
+                if let Passable::Passable = tile.0 {
                     player_transform.translation += movement;
-                    player_transform.translation.z = new_tile.y as f32 + 0.5;
+                    player_transform.translation.z = new_tile.y as f32 + 1.5;
                 }
-                break;
             }
         }
     }

@@ -7,15 +7,17 @@ pub struct TileMap {
     pub size: IVec2,
     /// Size of tiles in pixels
     pub tile_size: IVec2,
+    pub scale: IVec2,
     tiles: Vec<Option<Entity>>,
 }
 
 impl TileMap {
-    pub fn new(size: IVec2, tile_size: IVec2) -> Self {
+    pub fn new(size: IVec2, tile_size: IVec2, scale: IVec2) -> Self {
         let tiles = vec![None; (size.x * size.y) as usize];
         TileMap {
             size,
             tile_size,
+            scale,
             tiles,
         }
     }
@@ -64,7 +66,39 @@ impl TileMap {
         }
     }
 
-    fn height(&self) -> i32 {
+    pub fn height(&self) -> i32 {
         (self.size.y - 1) * self.tile_size.y
+    }
+
+    pub fn to_tile_space(&self, origin: Vec3, point: Vec3) -> Vec3 {
+        let mut result = point - origin;
+        result.z = point.z;
+        result
+    }
+
+    // Convert tile space point to tile x,y
+    pub fn to_tile(&self, point: Vec3) -> IVec2 {
+        // tile space is 0,0 bottom left to x,y top right, bottom right at x,0
+        // tile index is 0,0 top left to x,y bottom right, top right at x,0
+        // index y = space 0, index 0 = space y
+        let scaled = IVec2::new(point.x as i32 / self.scale.x, point.y as i32 / self.scale.y);
+        IVec2::new(
+            scaled.x / self.tile_size.x,
+            (self.height() - scaled.y) / self.tile_size.y,
+        )
+    }
+
+    pub fn tile_at(&self, point: IVec2) -> Option<Entity> {
+        if point.x < 0 || point.x >= self.size.x {
+            None
+        } else if point.y < 0 || point.y >= self.size.y {
+            None
+        } else {
+            self.tiles[self.tile_index(point)]
+        }
+    }
+
+    fn tile_index(&self, point: IVec2) -> usize {
+        (point.x + (point.y * self.size.x)) as usize
     }
 }
