@@ -9,11 +9,15 @@ pub struct PlayerPlugin;
 #[derive(Component)]
 pub struct Player {
     holding: Option<Entity>,
+    heading: PlayerHeading,
 }
 
 impl Default for Player {
     fn default() -> Self {
-        Player { holding: None }
+        Player {
+            holding: None,
+            heading: PlayerHeading::Down,
+        }
     }
 }
 
@@ -21,6 +25,38 @@ impl Player {
     fn hold_item(&mut self, player_entity: Entity, item_entity: Entity, commands: &mut Commands) {
         commands.entity(player_entity).add_child(item_entity);
         self.holding = Some(item_entity);
+    }
+}
+
+enum PlayerHeading {
+    Down,
+    Up,
+    Left,
+    Right,
+}
+
+impl PlayerHeading {
+    fn from_vec(movement: Vec2) -> Self {
+        if movement.y < 0. {
+            PlayerHeading::Down
+        } else if movement.y > 0. {
+            PlayerHeading::Up
+        } else if movement.x < 0. {
+            PlayerHeading::Left
+        } else if movement.x > 0. {
+            PlayerHeading::Right
+        } else {
+            PlayerHeading::Down
+        }
+    }
+
+    fn sprite_index(&self) -> usize {
+        match self {
+            PlayerHeading::Down => 0,
+            PlayerHeading::Up => 1,
+            PlayerHeading::Left => 2,
+            PlayerHeading::Right => 3,
+        }
     }
 }
 
@@ -92,8 +128,8 @@ fn move_player(
     time: Res<Time>,
     actions: Res<Actions>,
     mut player_query: Query<
-        (&mut Transform, &mut TextureAtlasSprite),
-        (With<Player>, Without<Tile>),
+        (&mut Transform, &mut TextureAtlasSprite, &mut Player),
+        (Without<Tile>, Without<Item>),
     >,
     world_query: Query<(&Transform, &Tile), Without<Player>>,
 ) {
@@ -106,20 +142,10 @@ fn move_player(
         actions.player_movement.unwrap().y * speed * time.delta_seconds(),
         0.,
     );
-    for (mut player_transform, mut sprite) in &mut player_query {
-        sprite.index = {
-            if movement.y < 0. {
-                0
-            } else if movement.y > 0. {
-                1
-            } else if movement.x < 0. {
-                2
-            } else if movement.x > 0. {
-                3
-            } else {
-                0
-            }
-        };
+    for (mut player_transform, mut sprite, mut player) in &mut player_query {
+        player.heading = PlayerHeading::from_vec(movement.truncate());
+        sprite.index = player.heading.sprite_index();
+
         let new_translation = player_transform.translation + movement;
         let new_tile = new_translation.to_tile_index();
         if new_tile == player_transform.translation.to_tile_index() {
