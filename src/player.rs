@@ -74,6 +74,8 @@ impl PlayerHeading {
 pub enum Item {
     Orange,
     Banana,
+    Spawner,
+    Mixer,
 }
 
 impl Item {
@@ -81,6 +83,8 @@ impl Item {
         match self {
             Item::Orange => texture_assets.orange.clone(),
             Item::Banana => texture_assets.banana.clone(),
+            Item::Spawner => texture_assets.bowl_filled.clone(),
+            Item::Mixer => texture_assets.bowl_empty.clone(),
         }
     }
 
@@ -106,6 +110,17 @@ impl Item {
             .id();
         item_id
     }
+
+    fn pickup(
+        &self,
+        entity: Entity,
+        textures: &Res<TextureAssets>,
+        commands: &mut Commands,
+    ) -> Entity {
+        commands.entity(entity).remove_parent();
+
+        entity
+    }
 }
 
 /// This plugin handles player related stuff like movement
@@ -114,7 +129,8 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_system(spawn_player.in_schedule(OnEnter(GameState::Playing)))
             .add_system(move_player.in_set(OnUpdate(GameState::Playing)))
-            .add_system(player_interact.in_set(OnUpdate(GameState::Playing)));
+            .add_system(player_interact.in_set(OnUpdate(GameState::Playing)))
+            .add_system(position_held.in_set(OnUpdate(GameState::Playing)));
     }
 }
 
@@ -185,6 +201,7 @@ fn move_player(
 
 fn player_interact(
     mut commands: Commands,
+    textures: Res<TextureAssets>,
     actions: Res<Actions>,
     mut player_query: Query<
         (Entity, &Transform, &mut Player),
@@ -227,6 +244,7 @@ fn player_interact(
                     &mut player,
                     tile_entity,
                     &mut commands,
+                    &textures,
                     &mut item_query,
                     &tile_query,
                 ) {
@@ -242,6 +260,7 @@ fn pickup(
     player: &mut Player,
     tile_entity: Entity,
     commands: &mut Commands,
+    textures: &Res<TextureAssets>,
     item_query: &mut Query<
         (Entity, &mut Transform, &Item),
         (Without<Player>, Without<Tile>, Without<TileMap>),
@@ -250,16 +269,33 @@ fn pickup(
 ) -> bool {
     if let Ok(children) = tile_query.get(tile_entity) {
         for child in children.iter() {
-            if let Ok((item_entity, mut item_transform, _item)) = item_query.get_mut(*child) {
+            if let Ok((item_entity, _item_transform, item)) = item_query.get_mut(*child) {
                 println!("Pickup");
-                item_transform.translation = Vec3::new(12., 16., 0.5);
-                commands.entity(item_entity).remove_parent();
-                commands.entity(player_entity).add_child(item_entity);
-                player.holding = Some(item_entity);
+                let picked_up = item.pickup(item_entity, textures, commands);
+                player.hold_item(player_entity, picked_up, commands);
                 return true;
             }
         }
     }
 
     false
+}
+
+fn position_held(
+    player_query: Query<&Player, Without<Item>>,
+    mut item_query: Query<&mut Transform, (With<Item>, Without<Player>)>,
+) {
+    let player = player_query.single();
+    if let Some(item_entity) = player.holding {
+        let mut transform = item_query.get_mut(item_entity).unwrap();
+        let x = {
+            let offset = player.heading.as_offset();
+            if offset.x != 0 {
+                12. * offset.x as f32
+            } else {
+                8. * offset.y as f32
+            }
+        };
+        transform.translation = Vec3::new(x, 16.0, 0.5);
+    }
 }

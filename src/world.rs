@@ -71,6 +71,10 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
             textures.barback.clone(),
             Passable::Blocking,
         );
+        if x == 12 {
+            let spawner = Item::Spawner.spawn(Vec3::new(0., 16., 0.5), &mut commands, &textures);
+            commands.entity(id).add_child(spawner);
+        }
         tile_map.insert(tile_map_id, id, position, &mut commands);
     }
 
@@ -91,17 +95,17 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
 
     for x in 4..20 {
         let position = IVec2::new(x, 10);
-        tile_map.insert(
-            tile_map_id,
-            spawn_tile(
-                &mut commands,
-                position,
-                textures.bar.clone(),
-                Passable::Blocking,
-            ),
-            position,
+        let id = spawn_tile(
             &mut commands,
+            position,
+            textures.bar.clone(),
+            Passable::Blocking,
         );
+        if x == 6 {
+            let mixer = Item::Mixer.spawn(Vec3::new(0., 16., 0.5), &mut commands, &textures);
+            commands.entity(id).add_child(mixer);
+        }
+        tile_map.insert(tile_map_id, id, position, &mut commands);
     }
 
     for x in 2..4 {
