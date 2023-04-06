@@ -1,5 +1,6 @@
 use crate::actions::Actions;
 use crate::loading::TextureAssets;
+use crate::tilemap::TileMap;
 use crate::world::{AsTile, Passable, Tile, TileSpace, ToTileIndex, SCALE};
 use crate::GameState;
 use bevy::prelude::*;
@@ -104,7 +105,7 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_system(spawn_player.in_schedule(OnEnter(GameState::Playing)))
             .add_system(move_player.in_set(OnUpdate(GameState::Playing)))
-            .add_system(player_pickup.in_set(OnUpdate(GameState::Playing)));
+            .add_system(player_interact.in_set(OnUpdate(GameState::Playing)));
     }
 }
 
@@ -129,10 +130,13 @@ fn move_player(
     actions: Res<Actions>,
     mut player_query: Query<
         (&mut Transform, &mut TextureAtlasSprite, &mut Player),
-        (Without<Tile>, Without<Item>),
+        (Without<Tile>, Without<Item>, Without<TileMap>),
     >,
-    world_query: Query<(&Transform, &Tile), Without<Player>>,
+    tile_map_query: Query<(&TileMap, &Transform), (With<TileMap>, Without<Player>)>,
+    tile_query: Query<(&Tile, &Transform)>,
 ) {
+    let (tile_map, tile_map_transform) = tile_map_query.single();
+
     if actions.player_movement.is_none() {
         return;
     }
@@ -147,88 +151,80 @@ fn move_player(
         sprite.index = player.heading.sprite_index();
 
         let new_translation = player_transform.translation + movement;
-        let new_tile = new_translation.to_tile_index();
-        if new_tile == player_transform.translation.to_tile_index() {
+        let new_tile = tile_map
+            .to_tile(tile_map.to_tile_space(tile_map_transform.translation, new_translation));
+        if new_tile
+            == tile_map.to_tile(
+                tile_map
+                    .to_tile_space(tile_map_transform.translation, player_transform.translation),
+            )
+        {
             player_transform.translation += movement;
             continue;
         }
 
-        for (transform, passable) in &world_query {
-            let tile = transform.translation.to_tile_index();
-            if tile == new_tile {
-                if let Passable::Passable = passable.0 {
+        if let Some(tile_entity) = tile_map.tile_at(new_tile) {
+            if let Ok((tile, _transform)) = tile_query.get(tile_entity) {
+                if let Passable::Passable = tile.0 {
                     player_transform.translation += movement;
-                    player_transform.translation.z = new_tile.y as f32 + 0.5;
+                    player_transform.translation.z = new_tile.y as f32 + 1.5;
                 }
-                break;
             }
         }
     }
 }
 
-fn player_pickup(
+fn player_interact(
     mut commands: Commands,
-    textures: Res<TextureAssets>,
     actions: Res<Actions>,
-    mut player_query: Query<(Entity, &Transform, &mut Player), Without<Tile>>,
-    tile_query: Query<
-        (Entity, &Transform, Option<&Children>),
-        (With<Tile>, Without<Player>, Without<Item>),
+    mut player_query: Query<
+        (Entity, &Transform, &mut Player),
+        (Without<TileMap>, Without<Item>, Without<Tile>),
     >,
-    mut item_query: Query<(Entity, &mut Transform, &Item), (Without<Player>, Without<Tile>)>,
+    tile_map_query: Query<(&TileMap, &Transform), (Without<Player>, Without<Tile>, Without<Item>)>,
+    mut item_query: Query<
+        (Entity, &mut Transform, &Item),
+        (Without<Player>, Without<Tile>, Without<TileMap>),
+    >,
+    tile_query: Query<&Children, With<Tile>>,
 ) {
-    if actions.pick_up.0 == true && actions.pick_up.1 == false {
-        let (player_entity, transform, mut player) = player_query.single_mut();
+    // Only interact if the button was just released.
+    if !(actions.pick_up.0 == true && actions.pick_up.1 == false) {
+        return;
+    }
 
-        if let Some(holding) = player.holding {
-            commands.entity(holding).remove_parent();
-            player.holding = None;
+    let (player_entity, player_transform, mut player) = player_query.single_mut();
+    let (tile_map, tile_map_transform) = tile_map_query.single();
 
-            let player_tile = transform.translation.to_tile_index();
-            if let Some(tile_entity) = tile_at(player_tile, &tile_query) {
-                println!("Drop on tile");
-                let (_, mut item_transform, _) = item_query.get_mut(holding).unwrap();
-                item_transform.translation = Vec3::new(0., 0., 0.5);
-                commands.entity(tile_entity).add_child(holding);
-            } else {
-                println!("despawn");
-                commands.entity(holding).despawn();
-            }
-        } else {
-            if let Some(tile_entity) = tile_at(transform.translation.to_tile_index(), &tile_query) {
-                if let Ok((_, _, Some(children))) = tile_query.get(tile_entity) {
-                    for child in children.iter() {
-                        if let Ok((_, mut item_transform, _item)) = item_query.get_mut(*child) {
-                            println!("pickup");
-                            item_transform.translation = Vec3::new(12., 16., 0.5);
-                            commands.entity(*child).remove_parent();
-                            commands.entity(player_entity).add_child(*child);
-                            player.holding = Some(*child);
-                            return;
-                        }
+    let tile_index =
+        tile_map.camera_to_tile(tile_map_transform.translation, player_transform.translation);
+    if let Some(holding) = player.holding {
+        // Drop item.
+        commands.entity(holding).remove_parent();
+        player.holding = None;
+
+        if let Some(tile_entity) = tile_map.tile_at(tile_index) {
+            println!("Drop on tile");
+            let (_, mut item_transform, _) = item_query.get_mut(holding).unwrap();
+            item_transform.translation = Vec3::new(0., 0., 0.5);
+            commands.entity(tile_entity).add_child(holding);
+        }
+    } else {
+        // Try to pick up.
+        if let Some(tile_entity) = tile_map.tile_at(tile_index) {
+            if let Ok(children) = tile_query.get(tile_entity) {
+                for child in children.iter() {
+                    if let Ok((item_entity, mut item_transform, _item)) = item_query.get_mut(*child)
+                    {
+                        println!("Pickup");
+                        item_transform.translation = Vec3::new(12., 16., 0.5);
+                        commands.entity(item_entity).remove_parent();
+                        commands.entity(player_entity).add_child(item_entity);
+                        player.holding = Some(item_entity);
+                        break;
                     }
                 }
             }
-
-            println!("spawn");
-            let item_entity =
-                Item::Banana.spawn(Vec3::new(12., 16., 0.5), &mut commands, &textures);
-            player.hold_item(player_entity, item_entity, &mut commands);
         }
     }
-}
-
-fn tile_at(
-    tile_index: IVec2,
-    tile_query: &Query<
-        (Entity, &Transform, Option<&Children>),
-        (With<Tile>, Without<Player>, Without<Item>),
-    >,
-) -> Option<Entity> {
-    for (entity, transform, _) in tile_query {
-        if transform.translation.to_tile_index() == tile_index {
-            return Some(entity);
-        }
-    }
-    None
 }

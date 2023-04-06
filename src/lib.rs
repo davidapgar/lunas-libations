@@ -3,6 +3,7 @@ mod audio;
 mod loading;
 mod menu;
 mod player;
+mod tilemap;
 mod world;
 
 use crate::actions::ActionsPlugin;
