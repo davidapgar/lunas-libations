@@ -59,6 +59,15 @@ impl PlayerHeading {
             PlayerHeading::Right => 3,
         }
     }
+
+    fn as_offset(&self) -> IVec2 {
+        match self {
+            PlayerHeading::Down => IVec2::new(0, 1),
+            PlayerHeading::Up => IVec2::new(0, -1),
+            PlayerHeading::Left => IVec2::new(-1, 0),
+            PlayerHeading::Right => IVec2::new(1, 0),
+        }
+    }
 }
 
 #[derive(Component)]
@@ -211,20 +220,46 @@ fn player_interact(
         }
     } else {
         // Try to pick up.
-        if let Some(tile_entity) = tile_map.tile_at(tile_index) {
-            if let Ok(children) = tile_query.get(tile_entity) {
-                for child in children.iter() {
-                    if let Ok((item_entity, mut item_transform, _item)) = item_query.get_mut(*child)
-                    {
-                        println!("Pickup");
-                        item_transform.translation = Vec3::new(12., 16., 0.5);
-                        commands.entity(item_entity).remove_parent();
-                        commands.entity(player_entity).add_child(item_entity);
-                        player.holding = Some(item_entity);
-                        break;
-                    }
+        for idx in [tile_index, tile_index + player.heading.as_offset()] {
+            if let Some(tile_entity) = tile_map.tile_at(idx) {
+                if pickup(
+                    player_entity,
+                    &mut player,
+                    tile_entity,
+                    &mut commands,
+                    &mut item_query,
+                    &tile_query,
+                ) {
+                    break;
                 }
             }
         }
     }
+}
+
+fn pickup(
+    player_entity: Entity,
+    player: &mut Player,
+    tile_entity: Entity,
+    commands: &mut Commands,
+    item_query: &mut Query<
+        (Entity, &mut Transform, &Item),
+        (Without<Player>, Without<Tile>, Without<TileMap>),
+    >,
+    tile_query: &Query<&Children, With<Tile>>,
+) -> bool {
+    if let Ok(children) = tile_query.get(tile_entity) {
+        for child in children.iter() {
+            if let Ok((item_entity, mut item_transform, _item)) = item_query.get_mut(*child) {
+                println!("Pickup");
+                item_transform.translation = Vec3::new(12., 16., 0.5);
+                commands.entity(item_entity).remove_parent();
+                commands.entity(player_entity).add_child(item_entity);
+                player.holding = Some(item_entity);
+                return true;
+            }
+        }
+    }
+
+    false
 }
