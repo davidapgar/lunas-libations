@@ -179,7 +179,7 @@ fn spawn_player(mut commands: Commands, textures: Res<TextureAssets>) {
             texture_atlas: textures.luna.clone(),
             sprite: TextureAtlasSprite {
                 index: 0,
-                anchor: bevy::sprite::Anchor::BottomLeft,
+                anchor: bevy::sprite::Anchor::BottomCenter,
                 ..default()
             },
             transform: Transform::from_translation(IVec2::new(12, 9).as_tile().to_camera_space())
@@ -336,10 +336,12 @@ fn position_held(
 
     let x = {
         let offset = player.heading.as_offset();
-        if offset.x != 0 {
-            12. * offset.x as f32
+        if offset.x < 0 {
+            8. * offset.x as f32
+        } else if offset.x > 0 {
+            0.
         } else {
-            8. * offset.y as f32
+            4. * offset.y as f32
         }
     };
     transform.translation = Vec3::new(x, 16.0, 0.5);
