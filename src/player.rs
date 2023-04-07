@@ -1,7 +1,7 @@
 use crate::actions::Actions;
 use crate::loading::TextureAssets;
 use crate::tilemap::TileMap;
-use crate::world::{AsTile, Passable, Tile, TileSpace, ToTileIndex, SCALE};
+use crate::world::{AsTile, Passable, Tile, TileSpace, SCALE};
 use crate::GameState;
 use bevy::prelude::*;
 
@@ -108,7 +108,7 @@ impl Interactable {
 
     pub fn interact(
         &mut self,
-        entity: Entity,
+        _entity: Entity,
         commands: &mut Commands,
         textures: &Res<TextureAssets>,
     ) -> Option<Entity> {
@@ -119,7 +119,7 @@ impl Interactable {
                 commands,
                 textures,
             )),
-            Interactable::Mixer(mixer) => None,
+            Interactable::Mixer(_) => None,
         }
     }
 
@@ -205,20 +205,6 @@ impl Item {
             ))
             .id();
         item_id
-    }
-
-    fn pickup(
-        &self,
-        entity: Entity,
-        textures: &Res<TextureAssets>,
-        commands: &mut Commands,
-    ) -> Entity {
-        match self {
-            _ => {
-                commands.entity(entity).remove_parent();
-                entity
-            }
-        }
     }
 }
 
@@ -344,7 +330,7 @@ fn player_interact(
             };
 
             for child in children.iter() {
-                let Ok((i_entity, _interactable_transform, mut interactable)) = interactable_query.get_mut(*child) else {
+                let Ok((_i_entity, _interactable_transform, mut interactable)) = interactable_query.get_mut(*child) else {
                         continue;
                     };
 

@@ -2,12 +2,8 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use bevy::prelude::*;
-use bevy::window::PrimaryWindow;
-use bevy::winit::WinitWindows;
 use bevy::DefaultPlugins;
 use lunas_libations::GamePlugin;
-use std::io::Cursor;
-use winit::window::Icon;
 
 fn main() {
     App::new()

@@ -1,4 +1,3 @@
-use crate::GameState;
 use bevy::prelude::*;
 
 #[derive(Component)]

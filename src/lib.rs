@@ -15,7 +15,8 @@ use crate::world::WorldPlugin;
 
 use bevy::app::App;
 #[cfg(debug_assertions)]
-use bevy::diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin};
+use bevy::diagnostic::LogDiagnosticsPlugin;
+//use bevy::diagnostic::FrameTimeDiagnosticsPlugin;
 use bevy::prelude::*;
 
 // This example game uses States to separate logic
