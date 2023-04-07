@@ -71,11 +71,27 @@ impl PlayerHeading {
 }
 
 #[derive(Component)]
+pub enum Interactable {
+    Spawner(Item),
+    Mixer,
+}
+
+pub struct Mixer {
+    contains: Vec<Item>,
+}
+
+#[derive(Component, Clone)]
 pub enum Item {
     Orange,
     Banana,
     Spawner,
     Mixer,
+    Beverage(Beverage),
+}
+
+#[derive(Clone)]
+pub struct Beverage {
+    stats: i32,
 }
 
 impl Item {
@@ -85,12 +101,23 @@ impl Item {
             Item::Banana => texture_assets.banana.clone(),
             Item::Spawner => texture_assets.bowl_filled.clone(),
             Item::Mixer => texture_assets.bowl_empty.clone(),
+            Item::Beverage(_) => texture_assets.beverage.clone(),
         }
     }
 
     pub fn spawn(
         self,
         translation: Vec3,
+        commands: &mut Commands,
+        textures: &Res<TextureAssets>,
+    ) -> Entity {
+        self.spawn_internal(translation, Visibility::Visible, commands, textures)
+    }
+
+    pub fn spawn_internal(
+        self,
+        translation: Vec3,
+        visibility: Visibility,
         commands: &mut Commands,
         textures: &Res<TextureAssets>,
     ) -> Entity {
@@ -103,6 +130,7 @@ impl Item {
                         anchor: bevy::sprite::Anchor::BottomLeft,
                         ..default()
                     },
+                    visibility,
                     ..default()
                 },
                 self,
@@ -118,7 +146,12 @@ impl Item {
         commands: &mut Commands,
     ) -> Entity {
         match self {
-            Item::Spawner => Item::Banana.spawn(Vec3::new(0., 0., 0.5), commands, textures),
+            Item::Spawner => Item::Beverage(Beverage { stats: 0 }).spawn_internal(
+                Vec3::new(0., 0., 0.5),
+                Visibility::Hidden,
+                commands,
+                textures,
+            ),
             _ => {
                 commands.entity(entity).remove_parent();
                 entity
@@ -133,8 +166,10 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_system(spawn_player.in_schedule(OnEnter(GameState::Playing)))
             .add_system(move_player.in_set(OnUpdate(GameState::Playing)))
-            .add_system(player_interact.in_set(OnUpdate(GameState::Playing)))
-            .add_system(position_held.in_set(OnUpdate(GameState::Playing)));
+            .add_systems(
+                (player_interact, position_held.after(player_interact))
+                    .in_set(OnUpdate(GameState::Playing)),
+            );
     }
 }
 
@@ -287,19 +322,25 @@ fn pickup(
 
 fn position_held(
     player_query: Query<&Player, Without<Item>>,
-    mut item_query: Query<&mut Transform, (With<Item>, Without<Player>)>,
+    mut item_query: Query<(&mut Transform, &mut Visibility), (With<Item>, Without<Player>)>,
 ) {
     let player = player_query.single();
-    if let Some(item_entity) = player.holding {
-        let mut transform = item_query.get_mut(item_entity).unwrap();
-        let x = {
-            let offset = player.heading.as_offset();
-            if offset.x != 0 {
-                12. * offset.x as f32
-            } else {
-                8. * offset.y as f32
-            }
-        };
-        transform.translation = Vec3::new(x, 16.0, 0.5);
-    }
+    let Some(item_entity) = player.holding else {
+        return;
+    };
+    let Ok((mut transform, mut visibility)) = item_query.get_mut(item_entity) else {
+        return;
+    };
+
+    *visibility = Visibility::Visible;
+
+    let x = {
+        let offset = player.heading.as_offset();
+        if offset.x != 0 {
+            12. * offset.x as f32
+        } else {
+            8. * offset.y as f32
+        }
+    };
+    transform.translation = Vec3::new(x, 16.0, 0.5);
 }
