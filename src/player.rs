@@ -73,19 +73,89 @@ impl PlayerHeading {
 #[derive(Component)]
 pub enum Interactable {
     Spawner(Item),
-    Mixer,
+    Mixer(Mixer),
+}
+
+impl Interactable {
+    fn texture(&self, texture_assets: &Res<TextureAssets>) -> Handle<Image> {
+        match self {
+            Interactable::Spawner(_) => texture_assets.bowl_filled.clone(),
+            Interactable::Mixer(_) => texture_assets.bowl_empty.clone(),
+        }
+    }
+
+    pub fn spawn(
+        self,
+        translation: Vec3,
+        commands: &mut Commands,
+        textures: &Res<TextureAssets>,
+    ) -> Entity {
+        commands
+            .spawn((
+                SpriteBundle {
+                    texture: self.texture(textures),
+                    transform: Transform::from_translation(translation),
+                    sprite: Sprite {
+                        anchor: bevy::sprite::Anchor::BottomLeft,
+                        ..default()
+                    },
+                    ..default()
+                },
+                self,
+            ))
+            .id()
+    }
+
+    pub fn interact(
+        &mut self,
+        entity: Entity,
+        commands: &mut Commands,
+        textures: &Res<TextureAssets>,
+    ) -> Option<Entity> {
+        match self {
+            Interactable::Spawner(item) => Some(item.clone().spawn_internal(
+                Vec3::splat(0.),
+                Visibility::Hidden,
+                commands,
+                textures,
+            )),
+            Interactable::Mixer(mixer) => None,
+        }
+    }
+
+    pub fn consume(&mut self, item: Item, item_entity: Entity, commands: &mut Commands) -> bool {
+        match self {
+            Interactable::Spawner(_) => false,
+            Interactable::Mixer(mixer) => {
+                mixer.add(item);
+                commands.entity(item_entity).remove_parent();
+                commands.entity(item_entity).despawn();
+                true
+            }
+        }
+    }
 }
 
 pub struct Mixer {
     contains: Vec<Item>,
 }
 
+impl Mixer {
+    pub fn new() -> Self {
+        Mixer {
+            contains: Vec::new(),
+        }
+    }
+
+    pub fn add(&mut self, item: Item) {
+        self.contains.push(item);
+    }
+}
+
 #[derive(Component, Clone)]
 pub enum Item {
     Orange,
     Banana,
-    Spawner,
-    Mixer,
     Beverage(Beverage),
 }
 
@@ -99,8 +169,6 @@ impl Item {
         match self {
             Item::Orange => texture_assets.orange.clone(),
             Item::Banana => texture_assets.banana.clone(),
-            Item::Spawner => texture_assets.bowl_filled.clone(),
-            Item::Mixer => texture_assets.bowl_empty.clone(),
             Item::Beverage(_) => texture_assets.beverage.clone(),
         }
     }
@@ -146,12 +214,6 @@ impl Item {
         commands: &mut Commands,
     ) -> Entity {
         match self {
-            Item::Spawner => Item::Beverage(Beverage { stats: 0 }).spawn_internal(
-                Vec3::new(0., 0., 0.5),
-                Visibility::Hidden,
-                commands,
-                textures,
-            ),
             _ => {
                 commands.entity(entity).remove_parent();
                 entity
@@ -244,14 +306,18 @@ fn player_interact(
     actions: Res<Actions>,
     mut player_query: Query<
         (Entity, &Transform, &mut Player),
-        (Without<TileMap>, Without<Item>, Without<Tile>),
+        (Without<TileMap>, Without<Interactable>, Without<Tile>),
     >,
-    tile_map_query: Query<(&TileMap, &Transform), (Without<Player>, Without<Tile>, Without<Item>)>,
-    mut item_query: Query<
-        (Entity, &mut Transform, &Item),
+    tile_map_query: Query<
+        (&TileMap, &Transform),
+        (Without<Player>, Without<Tile>, Without<Interactable>),
+    >,
+    mut interactable_query: Query<
+        (Entity, &Transform, &mut Interactable),
         (Without<Player>, Without<Tile>, Without<TileMap>),
     >,
     tile_query: Query<&Children, With<Tile>>,
+    item_query: Query<&Item>,
 ) {
     // Only interact if the button was just released.
     if !(actions.pick_up.0 == true && actions.pick_up.1 == false) {
@@ -263,61 +329,57 @@ fn player_interact(
 
     let tile_index =
         tile_map.camera_to_tile(tile_map_transform.translation, player_transform.translation);
-    if let Some(holding) = player.holding {
-        // Drop item.
-        commands.entity(holding).remove_parent();
-        player.holding = None;
 
-        if let Some(tile_entity) = tile_map.tile_at(tile_index) {
-            println!("Drop on tile");
-            let (_, mut item_transform, _) = item_query.get_mut(holding).unwrap();
-            item_transform.translation = Vec3::new(0., 0., 0.5);
-            commands.entity(tile_entity).add_child(holding);
+    if let Some(holding) = player.holding {
+        // Get the held item
+        let item = item_query.get(holding).unwrap();
+        // Look for an interactable that can receive the item.
+        for idx in [tile_index, tile_index + player.heading.as_offset()] {
+            let Some(tile_entity) = tile_map.tile_at(idx) else {
+                continue;
+            };
+
+            let Ok(children) = tile_query.get(tile_entity) else {
+                continue;
+            };
+
+            for child in children.iter() {
+                let Ok((i_entity, _interactable_transform, mut interactable)) = interactable_query.get_mut(*child) else {
+                        continue;
+                    };
+
+                if interactable.consume(item.clone(), holding, &mut commands) {
+                    // Drop the entity, hold nothing.
+                    println!("Drop in interactable");
+                    player.holding = None;
+                    break;
+                }
+            }
         }
     } else {
         // Try to pick up.
         for idx in [tile_index, tile_index + player.heading.as_offset()] {
-            if let Some(tile_entity) = tile_map.tile_at(idx) {
-                if pickup(
-                    player_entity,
-                    &mut player,
-                    tile_entity,
-                    &mut commands,
-                    &textures,
-                    &mut item_query,
-                    &tile_query,
-                ) {
+            let Some(tile_entity) = tile_map.tile_at(idx) else {
+                continue;
+            };
+
+            let Ok(children) = tile_query.get(tile_entity) else {
+                continue;
+            };
+
+            for child in children.iter() {
+                let Ok((i_entity, _interactable_transform, mut interactable)) = interactable_query.get_mut(*child) else {
+                    continue;
+                };
+
+                if let Some(item_entity) = interactable.interact(i_entity, &mut commands, &textures)
+                {
+                    player.hold_item(player_entity, item_entity, &mut commands);
                     break;
                 }
             }
         }
     }
-}
-
-fn pickup(
-    player_entity: Entity,
-    player: &mut Player,
-    tile_entity: Entity,
-    commands: &mut Commands,
-    textures: &Res<TextureAssets>,
-    item_query: &mut Query<
-        (Entity, &mut Transform, &Item),
-        (Without<Player>, Without<Tile>, Without<TileMap>),
-    >,
-    tile_query: &Query<&Children, With<Tile>>,
-) -> bool {
-    if let Ok(children) = tile_query.get(tile_entity) {
-        for child in children.iter() {
-            if let Ok((item_entity, _item_transform, item)) = item_query.get_mut(*child) {
-                println!("Pickup");
-                let picked_up = item.pickup(item_entity, textures, commands);
-                player.hold_item(player_entity, picked_up, commands);
-                return true;
-            }
-        }
-    }
-
-    false
 }
 
 fn position_held(

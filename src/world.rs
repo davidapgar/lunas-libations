@@ -1,5 +1,5 @@
 use crate::loading::TextureAssets;
-use crate::player::Item;
+use crate::player::{Interactable, Item, Mixer};
 use crate::tilemap::TileMap;
 use crate::GameState;
 use bevy::prelude::*;
@@ -72,7 +72,11 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
             Passable::Blocking,
         );
         if x == 12 {
-            let spawner = Item::Spawner.spawn(Vec3::new(0., 16., 0.5), &mut commands, &textures);
+            let spawner = Interactable::Spawner(Item::Banana).spawn(
+                Vec3::new(0., 16., 0.5),
+                &mut commands,
+                &textures,
+            );
             commands.entity(id).add_child(spawner);
         }
         tile_map.insert(tile_map_id, id, position, &mut commands);
@@ -102,7 +106,11 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
             Passable::Blocking,
         );
         if x == 6 {
-            let mixer = Item::Mixer.spawn(Vec3::new(0., 16., 0.5), &mut commands, &textures);
+            let mixer = Interactable::Mixer(Mixer::new()).spawn(
+                Vec3::new(0., 16., 0.5),
+                &mut commands,
+                &textures,
+            );
             commands.entity(id).add_child(mixer);
         }
         tile_map.insert(tile_map_id, id, position, &mut commands);
