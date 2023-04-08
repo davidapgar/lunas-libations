@@ -46,8 +46,6 @@ impl TileMap {
     }
 
     pub fn transform_tiles(&self, query: &mut Query<&mut Transform, Without<TileMap>>) {
-        let height = self.height();
-
         for x in 0..self.size.x {
             for y in 0..self.size.y {
                 let tile_index = (x + (y * self.size.x)) as usize;
@@ -55,8 +53,8 @@ impl TileMap {
                     if let Ok(mut tile_transform) = query.get_mut(tile) {
                         let position = Vec3::new(
                             (x * self.tile_size.x) as f32,
-                            (height - y * self.tile_size.y) as f32,
-                            y as f32,
+                            (y * self.tile_size.y) as f32,
+                            self.tile_z(&IVec2::new(x, y)),
                         );
                         tile_transform.translation = position;
                     }
@@ -65,8 +63,9 @@ impl TileMap {
         }
     }
 
-    pub fn height(&self) -> i32 {
-        (self.size.y - 1) * self.tile_size.y
+    /// Z-level of passed tile.
+    pub fn tile_z(&self, tile: &IVec2) -> f32 {
+        (self.size.y - tile.y) as f32
     }
 
     pub fn to_tile_space(&self, origin: Vec3, point: Vec3) -> Vec3 {
@@ -77,14 +76,11 @@ impl TileMap {
 
     // Convert tile space point to tile x,y
     pub fn to_tile(&self, point: Vec3) -> IVec2 {
-        // tile space is 0,0 bottom left to x,y top right, bottom right at x,0
-        // tile index is 0,0 top left to x,y bottom right, top right at x,0
+        // tile space is 0,0 bottom left
+        // tile index is 0,0 bottom left
         // index y = space 0, index 0 = space y
         let scaled = IVec2::new(point.x as i32 / self.scale.x, point.y as i32 / self.scale.y);
-        IVec2::new(
-            scaled.x / self.tile_size.x,
-            (self.height() - scaled.y) / self.tile_size.y,
-        )
+        IVec2::new(scaled.x / self.tile_size.x, scaled.y / self.tile_size.y)
     }
 
     pub fn camera_to_tile(&self, origin: Vec3, point: Vec3) -> IVec2 {

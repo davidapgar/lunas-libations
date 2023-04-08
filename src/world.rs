@@ -54,7 +54,7 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
             transform: Transform::from_translation(Vec3::new(
                 -1. * SCREEN_SIZE.x / 2.,
                 -1. * SCREEN_SIZE.y / 2.,
-                1.0,
+                0.,
             ))
             .with_scale(Vec3::new(2., 2., 1.)),
             ..default()
@@ -62,15 +62,28 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
         .id();
 
     let mut tile_map = TileMap::new(WORLD_SIZE, IVec2::new(16, 16), IVec2::new(2, 2));
+    // tiles are 0,0 bottom left to ~(25,18) top right
+    //
+    // Layout (B = bar, C = counter, f = floor) (extended out)
+    // 16 fBBBBf
+    // 15 ffffff
+    // 14 ffffff
+    // 13 ffffff
+    // 12 fCCCCf
+    // 11 ffffff
+    // 10 ffffff
+    // 09 ffffff
+    // 08 fTfTff (tables)
+    // 07 ffffff
+    // 06 ffffff
+    // 05 ffffff
+    // 04 ffffff
 
+    // Bar back, flooring
+    let y = 16;
     for x in 4..20 {
-        let position = IVec2::new(x, 4);
-        let id = spawn_tile(
-            &mut commands,
-            position,
-            textures.barback.clone(),
-            Passable::Blocking,
-        );
+        let position = IVec2::new(x, y);
+        let id = spawn_tile(&mut commands, textures.barback.clone(), Passable::Blocking);
         if x == 12 {
             let spawner = Interactable::Spawner(Item::Banana).spawn(
                 Vec3::new(0., 16., 0.5),
@@ -86,15 +99,26 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
         }
         tile_map.insert(tile_map_id, id, position, &mut commands);
     }
+    for x in 2..4 {
+        let position = IVec2::new(x, y);
+        let id = spawn_floor(&mut commands, &textures);
+        tile_map.insert(tile_map_id, id, position, &mut commands);
+    }
+    for x in 20..22 {
+        let position = IVec2::new(x, y);
+        let id = spawn_floor(&mut commands, &textures);
+        tile_map.insert(tile_map_id, id, position, &mut commands);
+    }
 
-    for y in 5..10 {
-        for x in 2..24 {
+    // Flooring
+    for y in 13..16 {
+        for x in 2..22 {
             let position = IVec2::new(x, y);
-            let id = spawn_floor(&mut commands, &textures, position);
-            if y == 6 && x == 12 {
+            let id = spawn_floor(&mut commands, &textures);
+            if y == 16 && x == 12 {
                 let orange = Item::Orange.spawn(Vec3::new(0., 0., 0.5), &mut commands, &textures);
                 commands.entity(id).add_child(orange);
-            } else if y == 8 && x == 28 {
+            } else if y == 17 && x == 22 {
                 let banana = Item::Banana.spawn(Vec3::new(0., 0., 0.5), &mut commands, &textures);
                 commands.entity(id).add_child(banana);
             }
@@ -102,14 +126,11 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
         }
     }
 
+    // Bar, flooring
+    let y = 12;
     for x in 4..20 {
-        let position = IVec2::new(x, 10);
-        let id = spawn_tile(
-            &mut commands,
-            position,
-            textures.bar.clone(),
-            Passable::Blocking,
-        );
+        let position = IVec2::new(x, y);
+        let id = spawn_tile(&mut commands, textures.bar.clone(), Passable::Blocking);
         if x == 6 {
             let mixer = Interactable::Mixer(Mixer::new()).spawn(
                 Vec3::new(0., 16., 0.5),
@@ -130,43 +151,31 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
     }
 
     for x in 2..4 {
-        let position = IVec2::new(x, 10);
-        tile_map.insert(
-            tile_map_id,
-            spawn_floor(&mut commands, &textures, position),
-            position,
-            &mut commands,
-        );
+        let position = IVec2::new(x, y);
+        let id = spawn_floor(&mut commands, &textures);
+        tile_map.insert(tile_map_id, id, position, &mut commands);
     }
-    for x in 20..24 {
-        let position = IVec2::new(x, 10);
-        tile_map.insert(
-            tile_map_id,
-            spawn_floor(&mut commands, &textures, position),
-            position,
-            &mut commands,
-        );
+    for x in 20..22 {
+        let position = IVec2::new(x, y);
+        let id = spawn_floor(&mut commands, &textures);
+        tile_map.insert(tile_map_id, id, position, &mut commands);
     }
 
-    for y in 11..18 {
-        for x in 2..24 {
+    // Floor, tables
+    for y in 04..12 {
+        for x in 2..22 {
             let position = IVec2::new(x, y);
-            if y == 13 && (x == 4 || x == 8 || x == 16 || x == 20) {
+            if y == 10 && (x == 4 || x == 8 || x == 16 || x == 20) {
                 tile_map.insert(
                     tile_map_id,
-                    spawn_tile(
-                        &mut commands,
-                        position,
-                        textures.table.clone(),
-                        Passable::Blocking,
-                    ),
+                    spawn_tile(&mut commands, textures.table.clone(), Passable::Blocking),
                     position,
                     &mut commands,
                 );
             } else {
                 tile_map.insert(
                     tile_map_id,
-                    spawn_floor(&mut commands, &textures, position),
+                    spawn_floor(&mut commands, &textures),
                     position,
                     &mut commands,
                 );
@@ -178,30 +187,16 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
     commands.entity(tile_map_id).insert(tile_map);
 }
 
-fn spawn_floor(
-    commands: &mut Commands,
-    textures: &Res<TextureAssets>,
-    tile_location: IVec2,
-) -> Entity {
-    spawn_tile(
-        commands,
-        tile_location,
-        textures.floor1.clone(),
-        Passable::Passable,
-    )
+fn spawn_floor(commands: &mut Commands, textures: &Res<TextureAssets>) -> Entity {
+    spawn_tile(commands, textures.floor1.clone(), Passable::Passable)
 }
 
 // Camera defaults to center of screen being 0.0/0.0
 // So tile 0,0 (top left) will be at -25*16/20*16
 // tile 50,40 will be at 25*16/-20*16
 // tile at 25,20 will be at 0/0
-fn spawn_tile(
-    commands: &mut Commands,
-    tile_location: IVec2,
-    texture: Handle<Image>,
-    passable: Passable,
-) -> Entity {
-    let translation = tile_location.as_tile().to_camera_space();
+fn spawn_tile(commands: &mut Commands, texture: Handle<Image>, passable: Passable) -> Entity {
+    let translation = Vec3::splat(0.);
     commands
         .spawn((
             SpriteBundle {
@@ -216,57 +211,4 @@ fn spawn_tile(
             Tile(passable),
         ))
         .id()
-}
-
-pub trait TileSpace {
-    fn to_tile_space(&self) -> Vec3;
-    fn to_camera_space(&self) -> Vec3;
-}
-
-impl TileSpace for Vec3 {
-    fn to_tile_space(&self) -> Vec3 {
-        Vec3::new(
-            self.x + (SCREEN_SIZE.x / 2.0),
-            (SCREEN_SIZE.y / 2.0) - self.y,
-            self.z,
-        )
-    }
-
-    fn to_camera_space(&self) -> Vec3 {
-        Vec3::new(
-            self.x - (SCREEN_SIZE.x / 2.0),
-            (SCREEN_SIZE.y / 2.0) - self.y,
-            self.z,
-        )
-    }
-}
-
-pub trait AsTile {
-    fn as_tile(&self) -> Vec3;
-}
-
-pub trait ToTileIndex {
-    /// Convert from camera space to tile index.
-    fn to_tile_index(&self) -> IVec2;
-}
-// (20 - y) * 16 = tile_y (320 -> -320)
-// (20 - y) = tile_y / 16
-// 20 - (tile_y / 16) = y
-
-impl ToTileIndex for Vec3 {
-    // Convert a vec3 from camera space to tile space to tile index
-    fn to_tile_index(&self) -> IVec2 {
-        (self.to_tile_space() / TILE_SIZE).as_ivec3().truncate()
-    }
-}
-
-impl AsTile for IVec2 {
-    // Convert from tile index into coordinates in tile space
-    fn as_tile(&self) -> Vec3 {
-        Vec3::new(
-            self.x as f32 * TILE_SIZE,
-            self.y as f32 * TILE_SIZE,
-            self.y as f32,
-        )
-    }
 }
