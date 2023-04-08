@@ -74,13 +74,17 @@ impl PlayerHeading {
 pub enum Interactable {
     Spawner(Item),
     Mixer(Mixer),
+    Container(Container),
+    Trash,
 }
 
 impl Interactable {
     fn texture(&self, texture_assets: &Res<TextureAssets>) -> Handle<Image> {
         match self {
             Interactable::Spawner(_) => texture_assets.bowl_filled.clone(),
-            Interactable::Mixer(_) => texture_assets.bowl_empty.clone(),
+            Interactable::Mixer(_) => texture_assets.mixer.clone(),
+            Interactable::Container(_) => texture_assets.bowl_empty.clone(),
+            Interactable::Trash => texture_assets.trash.clone(),
         }
     }
 
@@ -132,14 +136,47 @@ impl Interactable {
                     None
                 }
             }
+            Interactable::Container(container) => {
+                if let None = container.holding {
+                    return None;
+                };
+
+                let item_entity = std::mem::replace(&mut container.holding, None).unwrap();
+
+                commands.entity(item_entity).remove_parent();
+
+                Some(item_entity)
+            }
+            Interactable::Trash => None,
         }
     }
 
-    pub fn consume(&mut self, item: Item, item_entity: Entity, commands: &mut Commands) -> bool {
+    pub fn consume(
+        &mut self,
+        entity: Entity,
+        item: Item,
+        item_entity: Entity,
+        commands: &mut Commands,
+    ) -> bool {
         match self {
             Interactable::Spawner(_) => false,
             Interactable::Mixer(mixer) => {
                 mixer.add(item);
+                commands.entity(item_entity).remove_parent();
+                commands.entity(item_entity).despawn();
+                true
+            }
+            Interactable::Container(container) => {
+                let None = container.holding else {
+                    return false;
+                };
+                container.holding = Some(item_entity);
+                commands.entity(item_entity).remove_parent();
+                commands.entity(entity).add_child(item_entity);
+
+                true
+            }
+            Interactable::Trash => {
                 commands.entity(item_entity).remove_parent();
                 commands.entity(item_entity).despawn();
                 true
@@ -151,6 +188,8 @@ impl Interactable {
         match self {
             Interactable::Spawner(_) => false,
             Interactable::Mixer(mixer) => mixer.mix(),
+            Interactable::Container(_) => false,
+            Interactable::Trash => false,
         }
     }
 }
@@ -184,6 +223,16 @@ impl Mixer {
 
     pub fn pickup(&mut self) -> Option<Item> {
         std::mem::replace(&mut self.result, None)
+    }
+}
+
+pub struct Container {
+    holding: Option<Entity>,
+}
+
+impl Container {
+    pub fn new() -> Self {
+        Container { holding: None }
     }
 }
 
@@ -369,11 +418,11 @@ fn player_pickup(
             };
 
             for child in children.iter() {
-                let Ok((_i_entity, _interactable_transform, mut interactable)) = interactable_query.get_mut(*child) else {
+                let Ok((i_entity, _interactable_transform, mut interactable)) = interactable_query.get_mut(*child) else {
                         continue;
                     };
 
-                if interactable.consume(item.clone(), holding, &mut commands) {
+                if interactable.consume(i_entity, item.clone(), holding, &mut commands) {
                     // Drop the entity, hold nothing.
                     println!("Drop in interactable");
                     player.holding = None;
