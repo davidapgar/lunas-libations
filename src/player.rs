@@ -442,6 +442,7 @@ fn player_pickup(
         if !player.pickup_action {
             continue;
         }
+        player.pickup_action = false;
 
         let tile_index =
             tile_map.camera_to_tile(tile_map_transform.translation, player_transform.translation);
@@ -491,6 +492,7 @@ fn player_pickup(
                     if let Some(item_entity) =
                         interactable.pickup(i_entity, &mut commands, &textures)
                     {
+                        println!("Pickup");
                         player.hold_item(player_entity, item_entity, &mut commands);
                         break;
                     }
@@ -547,6 +549,7 @@ fn player_interact(
         if !player.interact_action {
             continue;
         }
+
         let (tile_map, tile_map_transform) = tile_map_query.single();
 
         let tile_index =

@@ -65,9 +65,10 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
     // tiles are 0,0 bottom left to ~(25,18) top right
     //
     // Layout (B = bar, C = counter, f = floor) (extended out)
+    // P player N npc
     // 16 fBBBBf
     // 15 ffffff
-    // 14 ffffff
+    // 14 ffPfff
     // 13 ffffff
     // 12 fCCCCf
     // 11 ffffff
@@ -75,7 +76,7 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
     // 09 ffffff
     // 08 fTfTff (tables)
     // 07 ffffff
-    // 06 ffffff
+    // 06 ffNfff
     // 05 ffffff
     // 04 ffffff
 

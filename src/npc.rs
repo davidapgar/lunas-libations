@@ -73,7 +73,7 @@ fn npc_move(
         let npc_tile =
             tile_map.camera_to_tile(tile_map_transform.translation, npc_transform.translation);
         if npc_tile != move_to {
-            let movement = (npc_tile - move_to).as_vec2().normalize_or_zero();
+            let movement = (move_to - npc_tile).as_vec2().normalize_or_zero();
             player.movement = Some(movement);
         } else {
             npc.move_to = None;
@@ -82,6 +82,7 @@ fn npc_move(
 }
 
 fn npc_ai(
+    mut commands: Commands,
     mut query: Query<(&mut NPC, &mut Player, &Transform)>,
     tile_map_query: Query<(&TileMap, &Transform)>,
 ) {
@@ -95,20 +96,32 @@ fn npc_ai(
             Behavior::Idle => {
                 println!("Update to request");
                 npc.behavior = Behavior::Request(Item::Banana);
-                npc.move_to = Some(npc_tile + IVec2::new(0, -4));
+                npc.move_to = Some(npc_tile + IVec2::new(0, 5));
             }
-            Behavior::Request(item) => {
+            Behavior::Request(_item) => {
                 if let None = npc.move_to {
                     println!("Update to grab");
                     npc.behavior = Behavior::Grab;
                 }
             }
             Behavior::Grab => {
-                player.pickup_action = true;
                 if let Some(_) = player.holding {
                     println!("Update to drink");
                     npc.behavior = Behavior::Drink;
+                    npc.move_to = Some(npc_tile + IVec2::new(0, -5));
+                } else {
+                    player.pickup_action = true;
                 }
+            }
+            Behavior::Drink => {
+                let None = npc.move_to else {
+                    return;
+                };
+                println!("Drink");
+                if let Some(holding) = std::mem::replace(&mut player.holding, None) {
+                    commands.entity(holding).remove_parent().despawn();
+                }
+                npc.behavior = Behavior::Idle;
             }
             _ => {}
         }
