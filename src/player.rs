@@ -8,6 +8,9 @@ use bevy::prelude::*;
 pub struct PlayerPlugin;
 
 #[derive(Component)]
+pub struct UserControllable;
+
+#[derive(Component)]
 pub struct Player {
     holding: Option<Entity>,
     heading: PlayerHeading,
@@ -310,8 +313,8 @@ impl Plugin for PlayerPlugin {
 }
 
 fn spawn_player(mut commands: Commands, textures: Res<TextureAssets>) {
-    commands
-        .spawn(SpriteSheetBundle {
+    commands.spawn((
+        SpriteSheetBundle {
             texture_atlas: textures.luna.clone(),
             sprite: TextureAtlasSprite {
                 index: 0,
@@ -321,8 +324,25 @@ fn spawn_player(mut commands: Commands, textures: Res<TextureAssets>) {
             transform: Transform::from_translation(IVec2::new(12, 9).as_tile().to_camera_space())
                 .with_scale(SCALE),
             ..Default::default()
-        })
-        .insert(Player::default());
+        },
+        Player::default(),
+        UserControllable,
+    ));
+
+    commands.spawn((
+        SpriteSheetBundle {
+            texture_atlas: textures.npc1.clone(),
+            sprite: TextureAtlasSprite {
+                index: 0,
+                anchor: bevy::sprite::Anchor::BottomCenter,
+                ..default()
+            },
+            transform: Transform::from_translation(IVec2::new(12, 17).as_tile().to_camera_space())
+                .with_scale(SCALE),
+            ..Default::default()
+        },
+        Player::default(),
+    ));
 }
 
 fn move_player(
@@ -330,7 +350,12 @@ fn move_player(
     actions: Res<Actions>,
     mut player_query: Query<
         (&mut Transform, &mut TextureAtlasSprite, &mut Player),
-        (Without<Tile>, Without<Item>, Without<TileMap>),
+        (
+            With<UserControllable>,
+            Without<Tile>,
+            Without<Item>,
+            Without<TileMap>,
+        ),
     >,
     tile_map_query: Query<(&TileMap, &Transform), (With<TileMap>, Without<Player>)>,
     tile_query: Query<(&Tile, &Transform)>,
@@ -398,57 +423,60 @@ fn player_pickup(
         return;
     }
 
-    let (player_entity, player_transform, mut player) = player_query.single_mut();
-    let (tile_map, tile_map_transform) = tile_map_query.single();
+    for (player_entity, player_transform, mut player) in &mut player_query {
+        let (tile_map, tile_map_transform) = tile_map_query.single();
 
-    let tile_index =
-        tile_map.camera_to_tile(tile_map_transform.translation, player_transform.translation);
+        let tile_index =
+            tile_map.camera_to_tile(tile_map_transform.translation, player_transform.translation);
 
-    if let Some(holding) = player.holding {
-        // Get the held item
-        let item = item_query.get(holding).unwrap();
-        // Look for an interactable that can receive the item.
-        for idx in [tile_index, tile_index + player.heading.as_offset()] {
-            let Some(tile_entity) = tile_map.tile_at(idx) else {
+        if let Some(holding) = player.holding {
+            // Get the held item
+            let item = item_query.get(holding).unwrap();
+            // Look for an interactable that can receive the item.
+            for idx in [tile_index, tile_index + player.heading.as_offset()] {
+                let Some(tile_entity) = tile_map.tile_at(idx) else {
                 continue;
             };
 
-            let Ok(children) = tile_query.get(tile_entity) else {
+                let Ok(children) = tile_query.get(tile_entity) else {
                 continue;
             };
 
-            for child in children.iter() {
-                let Ok((i_entity, _interactable_transform, mut interactable)) = interactable_query.get_mut(*child) else {
+                for child in children.iter() {
+                    let Ok((i_entity, _interactable_transform, mut interactable)) = interactable_query.get_mut(*child) else {
                         continue;
                     };
 
-                if interactable.consume(i_entity, item.clone(), holding, &mut commands) {
-                    // Drop the entity, hold nothing.
-                    println!("Drop in interactable");
-                    player.holding = None;
-                    break;
+                    if interactable.consume(i_entity, item.clone(), holding, &mut commands) {
+                        // Drop the entity, hold nothing.
+                        println!("Drop in interactable");
+                        player.holding = None;
+                        break;
+                    }
                 }
             }
-        }
-    } else {
-        // Try to pick up.
-        for idx in [tile_index, tile_index + player.heading.as_offset()] {
-            let Some(tile_entity) = tile_map.tile_at(idx) else {
+        } else {
+            // Try to pick up.
+            for idx in [tile_index, tile_index + player.heading.as_offset()] {
+                let Some(tile_entity) = tile_map.tile_at(idx) else {
                 continue;
             };
 
-            let Ok(children) = tile_query.get(tile_entity) else {
+                let Ok(children) = tile_query.get(tile_entity) else {
                 continue;
             };
 
-            for child in children.iter() {
-                let Ok((i_entity, _interactable_transform, mut interactable)) = interactable_query.get_mut(*child) else {
+                for child in children.iter() {
+                    let Ok((i_entity, _interactable_transform, mut interactable)) = interactable_query.get_mut(*child) else {
                     continue;
                 };
 
-                if let Some(item_entity) = interactable.pickup(i_entity, &mut commands, &textures) {
-                    player.hold_item(player_entity, item_entity, &mut commands);
-                    break;
+                    if let Some(item_entity) =
+                        interactable.pickup(i_entity, &mut commands, &textures)
+                    {
+                        player.hold_item(player_entity, item_entity, &mut commands);
+                        break;
+                    }
                 }
             }
         }
@@ -459,27 +487,28 @@ fn position_held(
     player_query: Query<&Player, Without<Item>>,
     mut item_query: Query<(&mut Transform, &mut Visibility), (With<Item>, Without<Player>)>,
 ) {
-    let player = player_query.single();
-    let Some(item_entity) = player.holding else {
-        return;
+    for player in &player_query {
+        let Some(item_entity) = player.holding else {
+        continue;
     };
-    let Ok((mut transform, mut visibility)) = item_query.get_mut(item_entity) else {
-        return;
+        let Ok((mut transform, mut visibility)) = item_query.get_mut(item_entity) else {
+        continue;
     };
 
-    *visibility = Visibility::Visible;
+        *visibility = Visibility::Visible;
 
-    let x = {
-        let offset = player.heading.as_offset();
-        if offset.x < 0 {
-            8. * offset.x as f32
-        } else if offset.x > 0 {
-            0.
-        } else {
-            4. * offset.y as f32
-        }
-    };
-    transform.translation = Vec3::new(x, 16.0, 0.5);
+        let x = {
+            let offset = player.heading.as_offset();
+            if offset.x < 0 {
+                8. * offset.x as f32
+            } else if offset.x > 0 {
+                0.
+            } else {
+                4. * offset.y as f32
+            }
+        };
+        transform.translation = Vec3::new(x, 16.0, 0.5);
+    }
 }
 
 fn player_interact(
@@ -503,29 +532,30 @@ fn player_interact(
         return;
     }
 
-    let (player_transform, player) = player_query.single();
-    let (tile_map, tile_map_transform) = tile_map_query.single();
+    for (player_transform, player) in &player_query {
+        let (tile_map, tile_map_transform) = tile_map_query.single();
 
-    let tile_index =
-        tile_map.camera_to_tile(tile_map_transform.translation, player_transform.translation);
+        let tile_index =
+            tile_map.camera_to_tile(tile_map_transform.translation, player_transform.translation);
 
-    for idx in [tile_index, tile_index + player.heading.as_offset()] {
-        let Some(tile_entity) = tile_map.tile_at(idx) else {
+        for idx in [tile_index, tile_index + player.heading.as_offset()] {
+            let Some(tile_entity) = tile_map.tile_at(idx) else {
             continue;
         };
 
-        let Ok(children) = tile_query.get(tile_entity) else {
+            let Ok(children) = tile_query.get(tile_entity) else {
             continue;
         };
 
-        for child in children.iter() {
-            let Ok((_i_entity, _interactable_transform, mut interactable)) = interactable_query.get_mut(*child) else {
+            for child in children.iter() {
+                let Ok((_i_entity, _interactable_transform, mut interactable)) = interactable_query.get_mut(*child) else {
                 continue;
             };
 
-            if interactable.interact() {
-                println!("Interact successful");
-                break;
+                if interactable.interact() {
+                    println!("Interact successful");
+                    break;
+                }
             }
         }
     }

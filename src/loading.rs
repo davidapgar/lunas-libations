@@ -39,6 +39,9 @@ pub struct TextureAssets {
     #[asset(texture_atlas(tile_size_x = 16., tile_size_y = 32., columns = 4, rows = 1))]
     #[asset(path = "textures/luna-16x32.png")]
     pub luna: Handle<TextureAtlas>,
+    #[asset(texture_atlas(tile_size_x = 16., tile_size_y = 32., columns = 4, rows = 1))]
+    #[asset(path = "textures/npc1-16x32.png")]
+    pub npc1: Handle<TextureAtlas>,
     #[asset(path = "textures/floor1-16x16.png")]
     pub floor1: Handle<Image>,
     #[asset(path = "textures/bar-16x24.png")]
