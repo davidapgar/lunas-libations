@@ -140,7 +140,7 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
             );
             commands.entity(id).add_child(mixer);
         }
-        if x == 12 {
+        if x >= 10 && x <= 16 {
             let container = Interactable::Container(Container::new()).spawn(
                 Vec3::new(0., 16., 0.5),
                 &mut commands,

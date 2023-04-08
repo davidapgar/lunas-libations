@@ -1,3 +1,4 @@
+use crate::loading::TextureAssets;
 use crate::player::{Item, Player};
 use crate::tilemap::TileMap;
 use crate::GameState;
@@ -83,12 +84,13 @@ fn npc_move(
 
 fn npc_ai(
     mut commands: Commands,
-    mut query: Query<(&mut NPC, &mut Player, &Transform)>,
+    textures: Res<TextureAssets>,
+    mut query: Query<(Entity, &mut NPC, &mut Player, &Transform)>,
     tile_map_query: Query<(&TileMap, &Transform)>,
 ) {
     let (tile_map, tile_map_transform) = tile_map_query.single();
 
-    for (mut npc, mut player, npc_transform) in &mut query {
+    for (entity, mut npc, mut player, npc_transform) in &mut query {
         let npc_tile =
             tile_map.camera_to_tile(tile_map_transform.translation, npc_transform.translation);
 
@@ -97,6 +99,7 @@ fn npc_ai(
                 println!("Update to request");
                 npc.behavior = Behavior::Request(Item::Banana);
                 npc.move_to = Some(npc_tile + IVec2::new(0, 5));
+                player.request(Item::Banana, entity, &mut commands, &textures);
             }
             Behavior::Request(_item) => {
                 if let None = npc.move_to {
@@ -107,6 +110,7 @@ fn npc_ai(
             Behavior::Grab => {
                 if let Some(_) = player.holding {
                     println!("Update to drink");
+                    player.stop_requesting(entity, &mut commands);
                     npc.behavior = Behavior::Drink;
                     npc.move_to = Some(npc_tile + IVec2::new(0, -5));
                 } else {

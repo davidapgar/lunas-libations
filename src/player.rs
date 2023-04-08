@@ -15,6 +15,7 @@ pub struct UserControllable;
 pub struct Player {
     pub movement: Option<Vec2>,
     pub holding: Option<Entity>,
+    pub requesting: Option<Entity>,
     heading: PlayerHeading,
     pub pickup_action: bool,
     pub interact_action: bool,
@@ -25,6 +26,7 @@ impl Default for Player {
         Player {
             movement: None,
             holding: None,
+            requesting: None,
             heading: PlayerHeading::Down,
             pickup_action: false,
             interact_action: false,
@@ -36,6 +38,26 @@ impl Player {
     fn hold_item(&mut self, player_entity: Entity, item_entity: Entity, commands: &mut Commands) {
         commands.entity(player_entity).add_child(item_entity);
         self.holding = Some(item_entity);
+    }
+
+    pub fn request(
+        &mut self,
+        item: Item,
+        player_entity: Entity,
+        commands: &mut Commands,
+        textures: &Res<TextureAssets>,
+    ) {
+        let item_entity = item.spawn(Vec3::new(-8., 32., 0.), commands, textures);
+        commands.entity(player_entity).add_child(item_entity);
+        self.requesting = Some(item_entity);
+    }
+
+    pub fn stop_requesting(&mut self, player_entity: Entity, commands: &mut Commands) {
+        let Some(item_entity) = std::mem::replace(&mut self.requesting, None) else {
+            return;
+        };
+
+        commands.entity(item_entity).remove_parent().despawn();
     }
 }
 
