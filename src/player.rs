@@ -14,6 +14,8 @@ pub struct UserControllable;
 pub struct Player {
     holding: Option<Entity>,
     heading: PlayerHeading,
+    pickup_action: bool,
+    interact_action: bool,
 }
 
 impl Default for Player {
@@ -21,6 +23,8 @@ impl Default for Player {
         Player {
             holding: None,
             heading: PlayerHeading::Down,
+            pickup_action: false,
+            interact_action: false,
         }
     }
 }
@@ -303,6 +307,7 @@ impl Plugin for PlayerPlugin {
             .add_system(move_player.in_set(OnUpdate(GameState::Playing)))
             .add_systems(
                 (
+                    handle_actions,
                     player_pickup,
                     player_interact,
                     position_held.after(player_pickup),
@@ -399,10 +404,18 @@ fn move_player(
     }
 }
 
+fn handle_actions(
+    actions: Res<Actions>,
+    mut player_query: Query<&mut Player, With<UserControllable>>,
+) {
+    let mut player = player_query.single_mut();
+    player.pickup_action = actions.pick_up.0 == true && actions.pick_up.1 == false;
+    player.interact_action = actions.interact.0 == true && actions.interact.1 == false;
+}
+
 fn player_pickup(
     mut commands: Commands,
     textures: Res<TextureAssets>,
-    actions: Res<Actions>,
     mut player_query: Query<
         (Entity, &Transform, &mut Player),
         (Without<TileMap>, Without<Interactable>, Without<Tile>),
@@ -418,13 +431,11 @@ fn player_pickup(
     tile_query: Query<&Children, With<Tile>>,
     item_query: Query<&Item>,
 ) {
-    // Only interact if the button was just released.
-    if !(actions.pick_up.0 == true && actions.pick_up.1 == false) {
-        return;
-    }
-
+    let (tile_map, tile_map_transform) = tile_map_query.single();
     for (player_entity, player_transform, mut player) in &mut player_query {
-        let (tile_map, tile_map_transform) = tile_map_query.single();
+        if !player.pickup_action {
+            continue;
+        }
 
         let tile_index =
             tile_map.camera_to_tile(tile_map_transform.translation, player_transform.translation);
@@ -512,7 +523,6 @@ fn position_held(
 }
 
 fn player_interact(
-    actions: Res<Actions>,
     player_query: Query<
         (&Transform, &Player),
         (Without<TileMap>, Without<Interactable>, Without<Tile>),
@@ -527,12 +537,10 @@ fn player_interact(
     >,
     tile_query: Query<&Children, With<Tile>>,
 ) {
-    // Only interact if the button was just released.
-    if !(actions.interact.0 == true && actions.interact.1 == false) {
-        return;
-    }
-
     for (player_transform, player) in &player_query {
+        if !player.interact_action {
+            continue;
+        }
         let (tile_map, tile_map_transform) = tile_map_query.single();
 
         let tile_index =
