@@ -61,12 +61,12 @@ fn update_npc_stats(time: Res<Time>, mut npc_query: Query<&mut NPC>) {
 }
 
 fn npc_move(
-    mut query: Query<(&NPC, &mut Player, &Transform)>,
+    mut query: Query<(&mut NPC, &mut Player, &Transform)>,
     tile_map_query: Query<(&TileMap, &Transform)>,
 ) {
     let (tile_map, tile_map_transform) = tile_map_query.single();
 
-    for (npc, mut player, npc_transform) in &mut query {
+    for (mut npc, mut player, npc_transform) in &mut query {
         let Some(move_to) = npc.move_to else {
             player.movement = None;
             continue;
@@ -77,20 +77,42 @@ fn npc_move(
         if npc_tile != move_to {
             let movement = (npc_tile - move_to).as_vec2().normalize_or_zero();
             player.movement = Some(movement);
+        } else {
+            npc.move_to = None;
         }
     }
 }
 
-fn npc_ai(mut query: Query<(&mut NPC, &Transform)>, tile_map_query: Query<(&TileMap, &Transform)>) {
+fn npc_ai(
+    mut query: Query<(&mut NPC, &mut Player, &Transform)>,
+    tile_map_query: Query<(&TileMap, &Transform)>,
+) {
     let (tile_map, tile_map_transform) = tile_map_query.single();
 
-    for (mut npc, npc_transform) in &mut query {
+    for (mut npc, mut player, npc_transform) in &mut query {
         let npc_tile =
             tile_map.camera_to_tile(tile_map_transform.translation, npc_transform.translation);
 
-        if let Behavior::Idle = npc.behavior {
-            npc.behavior = Behavior::Request(Item::Banana);
-            npc.move_to = Some(npc_tile + IVec2::new(0, -4));
+        match &npc.behavior {
+            Behavior::Idle => {
+                println!("Update to request");
+                npc.behavior = Behavior::Request(Item::Banana);
+                npc.move_to = Some(npc_tile + IVec2::new(0, -4));
+            }
+            Behavior::Request(item) => {
+                if let None = npc.move_to {
+                    println!("Update to grab");
+                    npc.behavior = Behavior::Grab;
+                }
+            }
+            Behavior::Grab => {
+                player.pickup_action = true;
+                if let Some(_) = player.holding {
+                    println!("Update to drink");
+                    npc.behavior = Behavior::Drink;
+                }
+            }
+            _ => {}
         }
     }
 }

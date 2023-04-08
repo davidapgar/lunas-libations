@@ -14,10 +14,10 @@ pub struct UserControllable;
 #[derive(Component)]
 pub struct Player {
     pub movement: Option<Vec2>,
-    holding: Option<Entity>,
+    pub holding: Option<Entity>,
     heading: PlayerHeading,
-    pickup_action: bool,
-    interact_action: bool,
+    pub pickup_action: bool,
+    pub interact_action: bool,
 }
 
 impl Default for Player {
@@ -349,7 +349,7 @@ fn spawn_player(mut commands: Commands, textures: Res<TextureAssets>) {
                 anchor: bevy::sprite::Anchor::BottomCenter,
                 ..default()
             },
-            transform: Transform::from_translation(IVec2::new(12, 17).as_tile().to_camera_space())
+            transform: Transform::from_translation(IVec2::new(13, 17).as_tile().to_camera_space())
                 .with_scale(SCALE),
             ..Default::default()
         },
