@@ -1,7 +1,5 @@
-use crate::loading::TextureAssets;
 use crate::player::{Item, Player};
 use crate::tilemap::TileMap;
-use crate::world::{AsTile, Passable, Tile, TileSpace, SCALE};
 use crate::GameState;
 use bevy::prelude::*;
 

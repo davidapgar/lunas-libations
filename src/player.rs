@@ -2,7 +2,7 @@ use crate::actions::Actions;
 use crate::loading::TextureAssets;
 use crate::npc::{Stats, NPC};
 use crate::tilemap::TileMap;
-use crate::world::{AsTile, Passable, Tile, TileSpace, SCALE};
+use crate::world::{Passable, Tile, SCALE};
 use crate::GameState;
 use bevy::prelude::*;
 
@@ -72,8 +72,8 @@ impl PlayerHeading {
 
     fn as_offset(&self) -> IVec2 {
         match self {
-            PlayerHeading::Down => IVec2::new(0, 1),
-            PlayerHeading::Up => IVec2::new(0, -1),
+            PlayerHeading::Down => IVec2::new(0, -1),
+            PlayerHeading::Up => IVec2::new(0, 1),
             PlayerHeading::Left => IVec2::new(-1, 0),
             PlayerHeading::Right => IVec2::new(1, 0),
         }
@@ -323,7 +323,9 @@ impl Plugin for PlayerPlugin {
 }
 
 fn spawn_player(mut commands: Commands, textures: Res<TextureAssets>) {
-    // Player
+    // Swag a position for the player and NPC, based on knowing the tile map origin of -400,-300
+    // Player at 12, 14
+    let position = Vec3::new(-400. + (12. * 32.), -300. + (14. * 32.), 18. - 14. + 0.5);
     commands.spawn((
         SpriteSheetBundle {
             texture_atlas: textures.luna.clone(),
@@ -332,15 +334,15 @@ fn spawn_player(mut commands: Commands, textures: Res<TextureAssets>) {
                 anchor: bevy::sprite::Anchor::BottomCenter,
                 ..default()
             },
-            transform: Transform::from_translation(IVec2::new(12, 9).as_tile().to_camera_space())
-                .with_scale(SCALE),
+            transform: Transform::from_translation(position).with_scale(SCALE),
             ..Default::default()
         },
         Player::default(),
         UserControllable,
     ));
 
-    // NPC
+    // NPC at 12, 6
+    let position = Vec3::new(-400. + (12. * 32.), -300. + (6. * 32.), 18. - 6. + 0.5);
     commands.spawn((
         SpriteSheetBundle {
             texture_atlas: textures.npc1.clone(),
@@ -349,8 +351,7 @@ fn spawn_player(mut commands: Commands, textures: Res<TextureAssets>) {
                 anchor: bevy::sprite::Anchor::BottomCenter,
                 ..default()
             },
-            transform: Transform::from_translation(IVec2::new(13, 17).as_tile().to_camera_space())
-                .with_scale(SCALE),
+            transform: Transform::from_translation(position).with_scale(SCALE),
             ..Default::default()
         },
         Player::default(),
@@ -400,7 +401,7 @@ fn move_player(
             if let Ok((tile, _transform)) = tile_query.get(tile_entity) {
                 if let Passable::Passable = tile.0 {
                     player_transform.translation += movement;
-                    player_transform.translation.z = new_tile.y as f32 + 1.5;
+                    player_transform.translation.z = tile_map.tile_z(&new_tile) + 0.5;
                 }
             }
         }
