@@ -44,6 +44,8 @@ pub struct TextureAssets {
     pub npc1: Handle<TextureAtlas>,
     #[asset(path = "textures/floor1-16x16.png")]
     pub floor1: Handle<Image>,
+    #[asset(path = "textures/table-16x16.png")]
+    pub table: Handle<Image>,
     #[asset(path = "textures/bar-16x24.png")]
     pub bar: Handle<Image>,
     #[asset(path = "textures/barback-16x24.png")]
