@@ -9,7 +9,7 @@ pub struct NPCPlugin;
 
 impl Plugin for NPCPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems((update_npc_stats,).in_set(OnUpdate(GameState::Playing)));
+        app.add_systems((update_npc_stats, npc_move, npc_ai).in_set(OnUpdate(GameState::Playing)));
     }
 }
 
@@ -67,9 +67,30 @@ fn npc_move(
     let (tile_map, tile_map_transform) = tile_map_query.single();
 
     for (npc, mut player, npc_transform) in &mut query {
-        if let Some(move_to) = npc.move_to {
-        } else {
-            //player.movement
+        let Some(move_to) = npc.move_to else {
+            player.movement = None;
+            continue;
+        };
+
+        let npc_tile =
+            tile_map.camera_to_tile(tile_map_transform.translation, npc_transform.translation);
+        if npc_tile != move_to {
+            let movement = (npc_tile - move_to).as_vec2().normalize_or_zero();
+            player.movement = Some(movement);
+        }
+    }
+}
+
+fn npc_ai(mut query: Query<(&mut NPC, &Transform)>, tile_map_query: Query<(&TileMap, &Transform)>) {
+    let (tile_map, tile_map_transform) = tile_map_query.single();
+
+    for (mut npc, npc_transform) in &mut query {
+        let npc_tile =
+            tile_map.camera_to_tile(tile_map_transform.translation, npc_transform.translation);
+
+        if let Behavior::Idle = npc.behavior {
+            npc.behavior = Behavior::Request(Item::Banana);
+            npc.move_to = Some(npc_tile + IVec2::new(0, -4));
         }
     }
 }

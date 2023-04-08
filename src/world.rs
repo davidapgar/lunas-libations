@@ -151,7 +151,7 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
     for y in 11..18 {
         for x in 2..24 {
             let position = IVec2::new(x, y);
-            if y == 13 && (x == 4 || x == 8 || x == 12 || x == 16 || x == 20) {
+            if y == 13 && (x == 4 || x == 8 || x == 16 || x == 20) {
                 tile_map.insert(
                     tile_map_id,
                     spawn_tile(

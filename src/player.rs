@@ -13,7 +13,7 @@ pub struct UserControllable;
 
 #[derive(Component)]
 pub struct Player {
-    movement: Option<Vec2>,
+    pub movement: Option<Vec2>,
     holding: Option<Entity>,
     heading: PlayerHeading,
     pickup_action: bool,
@@ -360,15 +360,9 @@ fn spawn_player(mut commands: Commands, textures: Res<TextureAssets>) {
 
 fn move_player(
     time: Res<Time>,
-    actions: Res<Actions>,
     mut player_query: Query<
         (&mut Transform, &mut TextureAtlasSprite, &mut Player),
-        (
-            With<UserControllable>,
-            Without<Tile>,
-            Without<Item>,
-            Without<TileMap>,
-        ),
+        (Without<Tile>, Without<Item>, Without<TileMap>),
     >,
     tile_map_query: Query<(&TileMap, &Transform), (With<TileMap>, Without<Player>)>,
     tile_query: Query<(&Tile, &Transform)>,
