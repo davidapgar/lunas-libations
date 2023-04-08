@@ -19,6 +19,7 @@ pub struct NPC {
     /// Goal to move to. If `None`, will stand still.
     move_to: Option<IVec2>,
     behavior: Behavior,
+    timer: Timer,
 }
 
 #[derive(Default, Copy, Clone)]
@@ -85,6 +86,7 @@ fn npc_move(
 fn npc_ai(
     mut commands: Commands,
     textures: Res<TextureAssets>,
+    time: Res<Time>,
     mut query: Query<(Entity, &mut NPC, &mut Player, &Transform)>,
     tile_map_query: Query<(&TileMap, &Transform)>,
 ) {
@@ -93,6 +95,11 @@ fn npc_ai(
     for (entity, mut npc, mut player, npc_transform) in &mut query {
         let npc_tile =
             tile_map.camera_to_tile(tile_map_transform.translation, npc_transform.translation);
+
+        npc.timer.tick(time.delta());
+        if !npc.timer.finished() {
+            continue;
+        }
 
         match &npc.behavior {
             Behavior::Idle => {
@@ -119,13 +126,14 @@ fn npc_ai(
             }
             Behavior::Drink => {
                 let None = npc.move_to else {
-                    return;
+                    continue;
                 };
                 println!("Drink");
                 if let Some(holding) = std::mem::replace(&mut player.holding, None) {
                     commands.entity(holding).remove_parent().despawn();
                 }
                 npc.behavior = Behavior::Idle;
+                npc.timer = Timer::from_seconds(0.5, TimerMode::Once);
             }
             _ => {}
         }
