@@ -21,6 +21,8 @@ pub struct Actions {
     pub player_movement: Option<Vec2>,
     // Current state, last state
     pub pick_up: (bool, bool),
+    // Current state, last state
+    pub interact: (bool, bool),
 }
 
 pub fn set_movement_actions(mut actions: ResMut<Actions>, keyboard_input: Res<Input<KeyCode>>) {
@@ -40,4 +42,8 @@ pub fn set_movement_actions(mut actions: ResMut<Actions>, keyboard_input: Res<In
     let grab = GameControl::Grab.pressed(&keyboard_input);
     actions.pick_up.1 = actions.pick_up.0;
     actions.pick_up.0 = grab;
+
+    let interact = GameControl::Interact.pressed(&keyboard_input);
+    actions.interact.1 = actions.interact.0;
+    actions.interact.0 = interact;
 }

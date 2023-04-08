@@ -106,7 +106,7 @@ impl Interactable {
             .id()
     }
 
-    pub fn interact(
+    pub fn pickup(
         &mut self,
         _entity: Entity,
         commands: &mut Commands,
@@ -119,7 +119,19 @@ impl Interactable {
                 commands,
                 textures,
             )),
-            Interactable::Mixer(_) => None,
+            Interactable::Mixer(mixer) => {
+                // Pickup and spawn entity from mixer if available.
+                if let Some(item) = mixer.pickup() {
+                    Some(item.spawn_internal(
+                        Vec3::splat(0.),
+                        Visibility::Hidden,
+                        commands,
+                        textures,
+                    ))
+                } else {
+                    None
+                }
+            }
         }
     }
 
@@ -134,21 +146,44 @@ impl Interactable {
             }
         }
     }
+
+    pub fn interact(&mut self) -> bool {
+        match self {
+            Interactable::Spawner(_) => false,
+            Interactable::Mixer(mixer) => mixer.mix(),
+        }
+    }
 }
 
 pub struct Mixer {
     contains: Vec<Item>,
+    result: Option<Item>,
 }
 
 impl Mixer {
     pub fn new() -> Self {
         Mixer {
             contains: Vec::new(),
+            result: None,
         }
     }
 
     pub fn add(&mut self, item: Item) {
         self.contains.push(item);
+    }
+
+    pub fn mix(&mut self) -> bool {
+        if self.contains.len() > 0 {
+            self.contains.clear();
+            self.result = Some(Item::Beverage(Beverage { stats: 1 }));
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn pickup(&mut self) -> Option<Item> {
+        std::mem::replace(&mut self.result, None)
     }
 }
 
@@ -215,7 +250,11 @@ impl Plugin for PlayerPlugin {
         app.add_system(spawn_player.in_schedule(OnEnter(GameState::Playing)))
             .add_system(move_player.in_set(OnUpdate(GameState::Playing)))
             .add_systems(
-                (player_interact, position_held.after(player_interact))
+                (
+                    player_pickup,
+                    player_interact,
+                    position_held.after(player_pickup),
+                )
                     .in_set(OnUpdate(GameState::Playing)),
             );
     }
@@ -286,7 +325,7 @@ fn move_player(
     }
 }
 
-fn player_interact(
+fn player_pickup(
     mut commands: Commands,
     textures: Res<TextureAssets>,
     actions: Res<Actions>,
@@ -358,8 +397,7 @@ fn player_interact(
                     continue;
                 };
 
-                if let Some(item_entity) = interactable.interact(i_entity, &mut commands, &textures)
-                {
+                if let Some(item_entity) = interactable.pickup(i_entity, &mut commands, &textures) {
                     player.hold_item(player_entity, item_entity, &mut commands);
                     break;
                 }
@@ -393,4 +431,53 @@ fn position_held(
         }
     };
     transform.translation = Vec3::new(x, 16.0, 0.5);
+}
+
+fn player_interact(
+    actions: Res<Actions>,
+    player_query: Query<
+        (&Transform, &Player),
+        (Without<TileMap>, Without<Interactable>, Without<Tile>),
+    >,
+    tile_map_query: Query<
+        (&TileMap, &Transform),
+        (Without<Player>, Without<Tile>, Without<Interactable>),
+    >,
+    mut interactable_query: Query<
+        (Entity, &Transform, &mut Interactable),
+        (Without<Player>, Without<Tile>, Without<TileMap>),
+    >,
+    tile_query: Query<&Children, With<Tile>>,
+) {
+    // Only interact if the button was just released.
+    if !(actions.interact.0 == true && actions.interact.1 == false) {
+        return;
+    }
+
+    let (player_transform, player) = player_query.single();
+    let (tile_map, tile_map_transform) = tile_map_query.single();
+
+    let tile_index =
+        tile_map.camera_to_tile(tile_map_transform.translation, player_transform.translation);
+
+    for idx in [tile_index, tile_index + player.heading.as_offset()] {
+        let Some(tile_entity) = tile_map.tile_at(idx) else {
+            continue;
+        };
+
+        let Ok(children) = tile_query.get(tile_entity) else {
+            continue;
+        };
+
+        for child in children.iter() {
+            let Ok((_i_entity, _interactable_transform, mut interactable)) = interactable_query.get_mut(*child) else {
+                continue;
+            };
+
+            if interactable.interact() {
+                println!("Interact successful");
+                break;
+            }
+        }
+    }
 }
