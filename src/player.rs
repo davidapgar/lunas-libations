@@ -1,5 +1,6 @@
 use crate::actions::Actions;
 use crate::loading::TextureAssets;
+use crate::npc::{Stats, NPC};
 use crate::tilemap::TileMap;
 use crate::world::{AsTile, Passable, Tile, TileSpace, SCALE};
 use crate::GameState;
@@ -12,6 +13,7 @@ pub struct UserControllable;
 
 #[derive(Component)]
 pub struct Player {
+    movement: Option<Vec2>,
     holding: Option<Entity>,
     heading: PlayerHeading,
     pickup_action: bool,
@@ -21,6 +23,7 @@ pub struct Player {
 impl Default for Player {
     fn default() -> Self {
         Player {
+            movement: None,
             holding: None,
             heading: PlayerHeading::Down,
             pickup_action: false,
@@ -221,7 +224,9 @@ impl Mixer {
     pub fn mix(&mut self) -> bool {
         if self.contains.len() > 0 {
             self.contains.clear();
-            self.result = Some(Item::Beverage(Beverage { stats: 1 }));
+            self.result = Some(Item::Beverage(Beverage {
+                stats: Stats::default(),
+            }));
             true
         } else {
             false
@@ -252,7 +257,7 @@ pub enum Item {
 
 #[derive(Clone)]
 pub struct Beverage {
-    stats: i32,
+    stats: Stats,
 }
 
 impl Item {
@@ -318,6 +323,7 @@ impl Plugin for PlayerPlugin {
 }
 
 fn spawn_player(mut commands: Commands, textures: Res<TextureAssets>) {
+    // Player
     commands.spawn((
         SpriteSheetBundle {
             texture_atlas: textures.luna.clone(),
@@ -334,6 +340,7 @@ fn spawn_player(mut commands: Commands, textures: Res<TextureAssets>) {
         UserControllable,
     ));
 
+    // NPC
     commands.spawn((
         SpriteSheetBundle {
             texture_atlas: textures.npc1.clone(),
@@ -347,6 +354,7 @@ fn spawn_player(mut commands: Commands, textures: Res<TextureAssets>) {
             ..Default::default()
         },
         Player::default(),
+        NPC::default(),
     ));
 }
 
@@ -367,16 +375,17 @@ fn move_player(
 ) {
     let (tile_map, tile_map_transform) = tile_map_query.single();
 
-    if actions.player_movement.is_none() {
-        return;
-    }
-    let speed = 150.;
-    let movement = Vec3::new(
-        actions.player_movement.unwrap().x * speed * time.delta_seconds(),
-        actions.player_movement.unwrap().y * speed * time.delta_seconds(),
-        0.,
-    );
     for (mut player_transform, mut sprite, mut player) in &mut player_query {
+        let Some(player_movement) = player.movement else {
+            continue;
+        };
+        let speed = 150.;
+        let movement = Vec3::new(
+            player_movement.x * speed * time.delta_seconds(),
+            player_movement.y * speed * time.delta_seconds(),
+            0.,
+        );
+
         player.heading = PlayerHeading::from_vec(movement.truncate());
         sprite.index = player.heading.sprite_index();
 
@@ -411,6 +420,8 @@ fn handle_actions(
     let mut player = player_query.single_mut();
     player.pickup_action = actions.pick_up.0 == true && actions.pick_up.1 == false;
     player.interact_action = actions.interact.0 == true && actions.interact.1 == false;
+
+    player.movement = actions.player_movement;
 }
 
 fn player_pickup(

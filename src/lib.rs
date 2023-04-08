@@ -2,6 +2,7 @@ mod actions;
 mod audio;
 mod loading;
 mod menu;
+mod npc;
 mod player;
 mod tilemap;
 mod world;
@@ -10,6 +11,7 @@ use crate::actions::ActionsPlugin;
 use crate::audio::InternalAudioPlugin;
 use crate::loading::LoadingPlugin;
 use crate::menu::MenuPlugin;
+use crate::npc::NPCPlugin;
 use crate::player::PlayerPlugin;
 use crate::world::WorldPlugin;
 
@@ -43,6 +45,7 @@ impl Plugin for GamePlugin {
             .add_plugin(ActionsPlugin)
             .add_plugin(InternalAudioPlugin)
             .add_plugin(PlayerPlugin)
+            .add_plugin(NPCPlugin)
             .add_plugin(WorldPlugin);
 
         #[cfg(debug_assertions)]
