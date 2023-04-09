@@ -115,3 +115,44 @@ impl TileMap {
         (point.x + (point.y * self.size.x)) as usize
     }
 }
+
+pub struct TileMapIterator<'a> {
+    tile_map: &'a TileMap,
+    x: i32,
+    y: i32,
+}
+
+impl<'a> TileMapIterator<'a> {
+    fn new(tile_map: &'a TileMap) -> Self {
+        TileMapIterator {
+            tile_map,
+            x: 0,
+            y: 0,
+        }
+    }
+
+    fn increment(&mut self) {
+        self.x += 1;
+        if self.x >= self.tile_map.size.x {
+            self.x = 0;
+            self.y += 1;
+        }
+    }
+}
+
+impl<'a> Iterator for TileMapIterator<'a> {
+    type Item = (IVec2, Entity);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            if self.y >= self.tile_map.size.y {
+                return None;
+            }
+            let point = IVec2::new(self.x, self.y);
+            if let Some(entity) = self.tile_map.tile_at(point) {
+                return Some((point, entity));
+            }
+            self.increment();
+        }
+    }
+}
