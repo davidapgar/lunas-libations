@@ -201,7 +201,41 @@ fn npc_ai(
                     npc_animations,
                 );
             }
-            _ => {}
+            Behavior::Chat => {
+                let None = npc.move_to else {
+                    continue;
+                };
+                println!("Chat");
+                npc_start_chat(&mut npc, &mut animation, npc_animations);
+            }
+            Behavior::Fight => {
+                let None = npc.move_to else {
+                    continue;
+                };
+                println!("Fight");
+                npc_start_fight(&mut npc, &mut animation, npc_animations);
+            }
+            Behavior::Dance => {
+                let None = npc.move_to else {
+                    continue;
+                };
+                println!("Dance");
+                npc_start_dance(&mut npc, &mut animation, npc_animations);
+            }
+            Behavior::Cry => {
+                let None = npc.move_to else {
+                    continue;
+                };
+                println!("Cry");
+                npc_start_cry(&mut npc, &mut animation, npc_animations);
+            }
+            Behavior::Puke => {
+                let None = npc.move_to else {
+                    continue;
+                };
+                println!("Puke");
+                npc_start_puke(&mut npc, &mut animation, npc_animations);
+            }
         }
     }
 }
@@ -265,6 +299,76 @@ fn npc_start_drinking(
     animation.start_animation(&npc_animations.drink);
     npc.behavior = Behavior::Idle;
     npc.timer = Timer::from_seconds(3.5, TimerMode::Once);
+}
+
+fn npc_to_chat(npc: &mut NPC) {
+    npc.behavior = Behavior::Chat;
+}
+
+fn npc_start_chat(
+    npc: &mut NPC,
+    animation: &mut AnimationComponent,
+    npc_animations: &NPCAnimations,
+) {
+    animation.start_animation(&npc_animations.talk_right);
+    npc.behavior = Behavior::Idle;
+    npc.timer = Timer::from_seconds(6.5, TimerMode::Once);
+}
+
+fn npc_to_fight(npc: &mut NPC) {
+    npc.behavior = Behavior::Fight;
+}
+
+fn npc_start_fight(
+    npc: &mut NPC,
+    animation: &mut AnimationComponent,
+    npc_animations: &NPCAnimations,
+) {
+    animation.start_animation(&npc_animations.punch_right);
+    npc.behavior = Behavior::Idle;
+    npc.timer = Timer::from_seconds(2.5, TimerMode::Once);
+}
+
+fn npc_to_dance(npc: &mut NPC) {
+    npc.behavior = Behavior::Dance;
+}
+
+fn npc_start_dance(
+    npc: &mut NPC,
+    animation: &mut AnimationComponent,
+    npc_animations: &NPCAnimations,
+) {
+    animation.start_animation(&npc_animations.dance);
+    npc.behavior = Behavior::Idle;
+    npc.timer = Timer::from_seconds(10.5, TimerMode::Once);
+}
+
+fn npc_to_cry(npc: &mut NPC) {
+    npc.behavior = Behavior::Cry;
+}
+
+fn npc_start_cry(
+    npc: &mut NPC,
+    animation: &mut AnimationComponent,
+    npc_animations: &NPCAnimations,
+) {
+    animation.start_animation(&npc_animations.cry);
+    npc.behavior = Behavior::Idle;
+    npc.timer = Timer::from_seconds(9.5, TimerMode::Once);
+}
+
+fn npc_to_puke(npc: &mut NPC) {
+    npc.behavior = Behavior::Puke;
+}
+
+fn npc_start_puke(
+    npc: &mut NPC,
+    animation: &mut AnimationComponent,
+    npc_animations: &NPCAnimations,
+) {
+    animation.start_animation(&npc_animations.puke);
+    npc.behavior = Behavior::Idle;
+    npc.timer = Timer::from_seconds(6.0, TimerMode::Once);
 }
 
 fn all_containers(
