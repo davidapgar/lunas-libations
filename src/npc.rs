@@ -4,6 +4,7 @@ use crate::tilemap::TileMap;
 use crate::world::Tile;
 use crate::GameState;
 use bevy::prelude::*;
+use rand::prelude::*;
 
 pub struct NPCPlugin;
 
@@ -113,15 +114,13 @@ fn npc_ai(
             Behavior::Idle => {
                 println!("Update to request");
                 // find a container
-                let mut dest: Option<IVec2> = None;
-                for (_, interactable, parent) in &interactable_query {
-                    if let Interactable::Container(_) = interactable {
-                        if let Some(location) = tile_map.find_tile(parent.get()) {
-                            dest = Some(location - IVec2::new(0, 1));
-                            break;
-                        }
-                    }
-                }
+                let containers = all_containers(&tile_map, &interactable_query, &tile_query);
+                let dest = if containers.len() > 0 {
+                    let (point, _) = containers.choose(&mut rand::thread_rng()).unwrap();
+                    Some(*point + IVec2::new(0, -1))
+                } else {
+                    None
+                };
                 npc.behavior = Behavior::Request(Item::Banana);
                 npc.move_to = dest;
                 player.request(Item::Banana, entity, &mut commands, &textures);
@@ -157,4 +156,28 @@ fn npc_ai(
             _ => {}
         }
     }
+}
+
+fn all_containers(
+    tile_map: &TileMap,
+    interactable_query: &Query<(Entity, &Interactable, &Parent)>,
+    tile_query: &Query<(&Tile, &Children)>,
+) -> Vec<(IVec2, Entity)> {
+    tile_map
+        .iter()
+        .filter(|(_, entity)| {
+            let mut result = false;
+            if let Ok((_, tile_children)) = tile_query.get(*entity) {
+                for child in tile_children.iter() {
+                    if let Ok((_, interactable, _)) = interactable_query.get(*child) {
+                        if let Interactable::Container(_) = interactable {
+                            result = true;
+                            break;
+                        }
+                    }
+                }
+            }
+            result
+        })
+        .collect()
 }
