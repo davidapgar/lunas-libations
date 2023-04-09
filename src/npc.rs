@@ -154,34 +154,35 @@ fn npc_ai(
         match &npc.behavior {
             Behavior::Idle => {
                 println!("Update to request");
-                animation.stop_animation();
-                // find a container
-                let containers = all_containers(&tile_map, &interactable_query, &tile_query);
-                let dest = if containers.len() > 0 {
-                    let (point, _) = containers.choose(&mut rand::thread_rng()).unwrap();
-                    Some(*point + IVec2::new(0, -1))
-                } else {
-                    None
-                };
-                npc.behavior = Behavior::Request(Item::Banana);
-                npc.move_to = dest;
-                player.request(Item::Banana, entity, &mut commands, &textures);
+                npc_to_request(
+                    &mut commands,
+                    &textures,
+                    entity,
+                    &mut npc,
+                    &mut player,
+                    &mut animation,
+                    tile_map,
+                    &interactable_query,
+                    &tile_query,
+                );
             }
             Behavior::Request(_item) => {
                 if let None = npc.move_to {
                     println!("Update to grab");
-                    player.heading = PlayerHeading::Up;
-                    npc.behavior = Behavior::Grab;
+                    npc_to_grab(&mut npc, &mut player);
                 }
             }
             Behavior::Grab => {
                 if let Some(_) = player.holding {
                     println!("Update to drink");
-                    player.stop_requesting(entity, &mut commands);
-                    npc.behavior = Behavior::Drink;
-                    let tables = all_tables(&tile_map, &tile_query);
-                    let (dest, _) = tables.choose(&mut rand::thread_rng()).unwrap();
-                    npc.move_to = Some(*dest + IVec2::new(0, 1));
+                    npc_to_drink(
+                        &mut commands,
+                        entity,
+                        &mut npc,
+                        &mut player,
+                        tile_map,
+                        &tile_query,
+                    );
                 } else {
                     player.pickup_action = true;
                 }
@@ -191,16 +192,79 @@ fn npc_ai(
                     continue;
                 };
                 println!("Drink");
-                if let Some(holding) = std::mem::replace(&mut player.holding, None) {
-                    commands.entity(holding).remove_parent().despawn();
-                }
-                animation.start_animation(&npc_animations.drink);
-                npc.behavior = Behavior::Idle;
-                npc.timer = Timer::from_seconds(3.5, TimerMode::Once);
+                npc_start_drinking(
+                    &mut commands,
+                    entity,
+                    &mut npc,
+                    &mut player,
+                    &mut animation,
+                    npc_animations,
+                );
             }
             _ => {}
         }
     }
+}
+
+fn npc_to_request(
+    commands: &mut Commands,
+    textures: &Res<TextureAssets>,
+    entity: Entity,
+    npc: &mut NPC,
+    player: &mut Player,
+    animation: &mut AnimationComponent,
+    tile_map: &TileMap,
+    interactable_query: &Query<(Entity, &Interactable, &Parent)>,
+    tile_query: &Query<(&Tile, Option<&Children>)>,
+) {
+    animation.stop_animation();
+    // find a container
+    let containers = all_containers(&tile_map, &interactable_query, &tile_query);
+    let dest = if containers.len() > 0 {
+        let (point, _) = containers.choose(&mut rand::thread_rng()).unwrap();
+        Some(*point + IVec2::new(0, -1))
+    } else {
+        None
+    };
+    npc.move_to = dest;
+    player.request(Item::Banana, entity, commands, textures);
+    npc.behavior = Behavior::Request(Item::Banana);
+}
+
+fn npc_to_grab(npc: &mut NPC, player: &mut Player) {
+    player.heading = PlayerHeading::Up;
+    npc.behavior = Behavior::Grab;
+}
+
+fn npc_to_drink(
+    commands: &mut Commands,
+    entity: Entity,
+    npc: &mut NPC,
+    player: &mut Player,
+    tile_map: &TileMap,
+    tile_query: &Query<(&Tile, Option<&Children>)>,
+) {
+    player.stop_requesting(entity, commands);
+    let tables = all_tables(&tile_map, &tile_query);
+    let (dest, _) = tables.choose(&mut rand::thread_rng()).unwrap();
+    npc.move_to = Some(*dest + IVec2::new(0, 1));
+    npc.behavior = Behavior::Drink;
+}
+
+fn npc_start_drinking(
+    commands: &mut Commands,
+    entity: Entity,
+    npc: &mut NPC,
+    player: &mut Player,
+    animation: &mut AnimationComponent,
+    npc_animations: &NPCAnimations,
+) {
+    if let Some(holding) = std::mem::replace(&mut player.holding, None) {
+        commands.entity(holding).remove_parent().despawn();
+    }
+    animation.start_animation(&npc_animations.drink);
+    npc.behavior = Behavior::Idle;
+    npc.timer = Timer::from_seconds(3.5, TimerMode::Once);
 }
 
 fn all_containers(
