@@ -26,6 +26,8 @@ struct NPCAnimations {
     talk_left: Animation,
     puke: Animation,
     cry: Animation,
+    punch_left: Animation,
+    punch_right: Animation,
 }
 
 impl NPCAnimations {
@@ -36,6 +38,8 @@ impl NPCAnimations {
             talk_left: Animation::new(&[2, 8], 0.4, true),
             puke: Animation::new(&[2, 10, 11, 12], 0.3, true),
             cry: Animation::new(&[0, 13, 14, 15, 16, 17], 0.3, true),
+            punch_left: Animation::new(&[2, 18, 19, 20], 0.3, true),
+            punch_right: Animation::new(&[3, 21, 22, 23], 0.3, true),
         }
     }
 }
@@ -188,7 +192,7 @@ fn npc_ai(
                 if let Some(holding) = std::mem::replace(&mut player.holding, None) {
                     commands.entity(holding).remove_parent().despawn();
                 }
-                animation.start_animation(&npc_animations.cry);
+                animation.start_animation(&npc_animations.punch_right);
                 npc.behavior = Behavior::Idle;
                 npc.timer = Timer::from_seconds(3.5, TimerMode::Once);
             }
