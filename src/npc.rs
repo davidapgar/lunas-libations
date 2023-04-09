@@ -11,11 +11,33 @@ pub struct NPCPlugin;
 
 impl Plugin for NPCPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(
-            (update_npc_stats, npc_move, npc_ai.after(npc_move))
-                .in_set(OnUpdate(GameState::Playing)),
-        );
+        app.add_system(setup_npc_animations.in_schedule(OnEnter(GameState::Playing)))
+            .add_systems(
+                (update_npc_stats, npc_move, npc_ai.after(npc_move))
+                    .in_set(OnUpdate(GameState::Playing)),
+            );
     }
+}
+
+#[derive(Component)]
+struct NPCAnimations {
+    dance: Animation,
+    talk_right: Animation,
+    talk_left: Animation,
+}
+
+impl NPCAnimations {
+    fn new() -> Self {
+        NPCAnimations {
+            dance: Animation::new(&[4, 5, 6, 7], 0.3, true),
+            talk_right: Animation::new(&[3, 9], 0.4, true),
+            talk_left: Animation::new(&[2, 8], 0.4, true),
+        }
+    }
+}
+
+fn setup_npc_animations(mut commands: Commands) {
+    commands.spawn(NPCAnimations::new());
 }
 
 #[derive(Component, Default)]
@@ -95,6 +117,7 @@ fn npc_ai(
     mut commands: Commands,
     textures: Res<TextureAssets>,
     time: Res<Time>,
+    npc_animations_query: Query<&NPCAnimations>,
     mut query: Query<(
         Entity,
         &mut NPC,
@@ -107,6 +130,7 @@ fn npc_ai(
     tile_query: Query<(&Tile, Option<&Children>)>,
 ) {
     let (tile_map, tile_map_transform) = tile_map_query.single();
+    let npc_animations = npc_animations_query.single();
 
     for (entity, mut npc, mut player, npc_transform, mut animation) in &mut query {
         let npc_tile =
@@ -160,7 +184,7 @@ fn npc_ai(
                 if let Some(holding) = std::mem::replace(&mut player.holding, None) {
                     commands.entity(holding).remove_parent().despawn();
                 }
-                animation.start_animation(&Animation::new(&[4, 5, 6, 7], 0.3, false));
+                animation.start_animation(&npc_animations.talk_right);
                 npc.behavior = Behavior::Idle;
                 npc.timer = Timer::from_seconds(3.5, TimerMode::Once);
             }
