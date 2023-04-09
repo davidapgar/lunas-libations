@@ -1,5 +1,5 @@
 use crate::loading::TextureAssets;
-use crate::player::{Interactable, Item, Player};
+use crate::player::{Interactable, Item, Player, PlayerHeading};
 use crate::tilemap::TileMap;
 use crate::GameState;
 use bevy::prelude::*;
@@ -8,7 +8,10 @@ pub struct NPCPlugin;
 
 impl Plugin for NPCPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems((update_npc_stats, npc_move, npc_ai).in_set(OnUpdate(GameState::Playing)));
+        app.add_systems(
+            (update_npc_stats, npc_move, npc_ai.after(npc_move))
+                .in_set(OnUpdate(GameState::Playing)),
+        );
     }
 }
 
@@ -79,6 +82,7 @@ fn npc_move(
             player.movement = Some(movement);
         } else {
             npc.move_to = None;
+            player.movement = None;
         }
     }
 }
@@ -122,6 +126,7 @@ fn npc_ai(
             Behavior::Request(_item) => {
                 if let None = npc.move_to {
                     println!("Update to grab");
+                    player.heading = PlayerHeading::Up;
                     npc.behavior = Behavior::Grab;
                 }
             }

@@ -16,7 +16,7 @@ pub struct Player {
     pub movement: Option<Vec2>,
     pub holding: Option<Entity>,
     pub requesting: Option<Entity>,
-    heading: PlayerHeading,
+    pub heading: PlayerHeading,
     pub pickup_action: bool,
     pub interact_action: bool,
 }
@@ -61,7 +61,7 @@ impl Player {
     }
 }
 
-enum PlayerHeading {
+pub enum PlayerHeading {
     Down,
     Up,
     Left,
@@ -393,6 +393,8 @@ fn move_player(
     let (tile_map, tile_map_transform) = tile_map_query.single();
 
     for (mut player_transform, mut sprite, mut player) in &mut player_query {
+        sprite.index = player.heading.sprite_index();
+
         let Some(player_movement) = player.movement else {
             continue;
         };

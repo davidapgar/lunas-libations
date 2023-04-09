@@ -74,11 +74,11 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
     // 11 ffffff
     // 10 ffffff
     // 09 ffffff
-    // 08 fTfTff (tables)
+    // 08 fTfTff
     // 07 ffffff
     // 06 ffNfff
     // 05 ffffff
-    // 04 ffffff
+    // 04 fTfTfT (tables)
 
     // Bar back, flooring
     let y = 16;
@@ -166,7 +166,7 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
     for y in 04..12 {
         for x in 2..22 {
             let position = IVec2::new(x, y);
-            if y == 10 && (x == 4 || x == 8 || x == 16 || x == 20) {
+            if y == 4 && (x == 4 || x == 8 || x == 12 || x == 16 || x == 20) {
                 tile_map.insert(
                     tile_map_id,
                     spawn_tile(&mut commands, textures.table.clone(), Passable::Blocking),
