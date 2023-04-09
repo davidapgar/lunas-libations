@@ -97,7 +97,7 @@ fn npc_ai(
     mut query: Query<(Entity, &mut NPC, &mut Player, &Transform)>,
     tile_map_query: Query<(&TileMap, &Transform)>,
     interactable_query: Query<(Entity, &Interactable, &Parent)>,
-    tile_query: Query<(&Tile, &Children)>,
+    tile_query: Query<(&Tile, Option<&Children>)>,
 ) {
     let (tile_map, tile_map_transform) = tile_map_query.single();
 
@@ -137,7 +137,9 @@ fn npc_ai(
                     println!("Update to drink");
                     player.stop_requesting(entity, &mut commands);
                     npc.behavior = Behavior::Drink;
-                    npc.move_to = Some(npc_tile + IVec2::new(0, -5));
+                    let tables = all_tables(&tile_map, &tile_query);
+                    let (dest, _) = tables.choose(&mut rand::thread_rng()).unwrap();
+                    npc.move_to = Some(*dest + IVec2::new(0, 1));
                 } else {
                     player.pickup_action = true;
                 }
@@ -161,23 +163,46 @@ fn npc_ai(
 fn all_containers(
     tile_map: &TileMap,
     interactable_query: &Query<(Entity, &Interactable, &Parent)>,
-    tile_query: &Query<(&Tile, &Children)>,
+    tile_query: &Query<(&Tile, Option<&Children>)>,
 ) -> Vec<(IVec2, Entity)> {
     tile_map
         .iter()
         .filter(|(_, entity)| {
-            let mut result = false;
-            if let Ok((_, tile_children)) = tile_query.get(*entity) {
+            if let Ok((_, tile_children_option)) = tile_query.get(*entity) {
+                let Some(tile_children) = tile_children_option else {
+                    return false;
+                };
+
                 for child in tile_children.iter() {
-                    if let Ok((_, interactable, _)) = interactable_query.get(*child) {
-                        if let Interactable::Container(_) = interactable {
-                            result = true;
-                            break;
-                        }
+                    let Ok((_, interactable, _)) = interactable_query.get(*child) else {
+                        continue;
+                    };
+                    if let Interactable::Container(_) = interactable {
+                        return true;
                     }
                 }
             }
-            result
+            false
+        })
+        .collect()
+}
+
+fn all_tables(
+    tile_map: &TileMap,
+    tile_query: &Query<(&Tile, Option<&Children>)>,
+) -> Vec<(IVec2, Entity)> {
+    tile_map
+        .iter()
+        .filter(|(_, entity)| {
+            if let Ok((tile, _)) = tile_query.get(*entity) {
+                if let Tile::Table = tile {
+                    true
+                } else {
+                    false
+                }
+            } else {
+                false
+            }
         })
         .collect()
 }
