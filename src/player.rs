@@ -363,8 +363,20 @@ fn spawn_player(mut commands: Commands, textures: Res<TextureAssets>) {
         UserControllable,
     ));
 
-    // NPC at 12, 6
-    let position = Vec3::new(-400. + (12. * 32.), -300. + (6. * 32.), 18. - 6. + 0.5);
+    // NPCs at (12, 6), (8, 6), (2, 5), (17, 7)
+    spawn_npc(&mut commands, &textures, IVec2::new(12, 6));
+    spawn_npc(&mut commands, &textures, IVec2::new(8, 6));
+    spawn_npc(&mut commands, &textures, IVec2::new(2, 5));
+    spawn_npc(&mut commands, &textures, IVec2::new(17, 7));
+}
+
+fn spawn_npc(commands: &mut Commands, textures: &Res<TextureAssets>, tile: IVec2) {
+    let position = Vec3::new(
+        -400. + (tile.x as f32 * 32.),
+        -300. + (tile.y as f32 * 32.),
+        18. - tile.y as f32 + 0.5,
+    );
+
     commands.spawn((
         SpriteSheetBundle {
             texture_atlas: textures.npc1.clone(),

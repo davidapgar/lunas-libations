@@ -41,6 +41,7 @@ enum Behavior {
     Request(Item),
     Grab,
     Drink,
+    Chat,
     Fight,
     Dance,
     Cry,
