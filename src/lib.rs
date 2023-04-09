@@ -1,4 +1,5 @@
 mod actions;
+mod animate;
 mod audio;
 mod loading;
 mod menu;
@@ -8,6 +9,7 @@ mod tilemap;
 mod world;
 
 use crate::actions::ActionsPlugin;
+use crate::animate::AnimatePlugin;
 use crate::audio::InternalAudioPlugin;
 use crate::loading::LoadingPlugin;
 use crate::menu::MenuPlugin;
@@ -40,6 +42,7 @@ pub struct GamePlugin;
 impl Plugin for GamePlugin {
     fn build(&self, app: &mut App) {
         app.add_state::<GameState>()
+            .add_plugin(AnimatePlugin)
             .add_plugin(LoadingPlugin)
             .add_plugin(MenuPlugin)
             .add_plugin(ActionsPlugin)

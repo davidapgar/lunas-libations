@@ -1,4 +1,5 @@
 use crate::actions::Actions;
+use crate::animate::AnimationComponent;
 use crate::loading::TextureAssets;
 use crate::npc::{Stats, NPC};
 use crate::tilemap::TileMap;
@@ -390,6 +391,7 @@ fn spawn_npc(commands: &mut Commands, textures: &Res<TextureAssets>, tile: IVec2
         },
         Player::default(),
         NPC::default(),
+        AnimationComponent::default(),
     ));
 }
 
@@ -405,8 +407,6 @@ fn move_player(
     let (tile_map, tile_map_transform) = tile_map_query.single();
 
     for (mut player_transform, mut sprite, mut player) in &mut player_query {
-        sprite.index = player.heading.sprite_index();
-
         let Some(player_movement) = player.movement else {
             continue;
         };

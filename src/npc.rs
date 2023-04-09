@@ -1,3 +1,4 @@
+use crate::animate::{Animation, AnimationComponent};
 use crate::loading::TextureAssets;
 use crate::player::{Interactable, Item, Player, PlayerHeading};
 use crate::tilemap::TileMap;
@@ -60,9 +61,9 @@ fn update_npc_stats(time: Res<Time>, mut npc_query: Query<&mut NPC>) {
     for mut npc in &mut npc_query {
         // TODO: Tune these. They drop a percentage of the value towards zero, then also a
         // constant.
-        npc.stats.quench = npc.stats.quench - (npc.stats.quench * delta * 0.20) - (delta * 20.);
-        npc.stats.mood = npc.stats.mood - (npc.stats.mood * delta * 0.10) - (delta * 10.);
-        npc.stats.drunk = npc.stats.quench - (npc.stats.quench * delta * 0.05) - (delta * 1.);
+        npc.stats.quench = npc.stats.quench - (npc.stats.quench * delta * 0.20) - (delta * 2.0);
+        npc.stats.mood = npc.stats.mood - (npc.stats.mood * delta * 0.10) - (delta * 1.0);
+        npc.stats.drunk = npc.stats.quench - (npc.stats.quench * delta * 0.05) - (delta * 0.1);
     }
 }
 
@@ -94,14 +95,20 @@ fn npc_ai(
     mut commands: Commands,
     textures: Res<TextureAssets>,
     time: Res<Time>,
-    mut query: Query<(Entity, &mut NPC, &mut Player, &Transform)>,
+    mut query: Query<(
+        Entity,
+        &mut NPC,
+        &mut Player,
+        &Transform,
+        &mut AnimationComponent,
+    )>,
     tile_map_query: Query<(&TileMap, &Transform)>,
     interactable_query: Query<(Entity, &Interactable, &Parent)>,
     tile_query: Query<(&Tile, Option<&Children>)>,
 ) {
     let (tile_map, tile_map_transform) = tile_map_query.single();
 
-    for (entity, mut npc, mut player, npc_transform) in &mut query {
+    for (entity, mut npc, mut player, npc_transform, mut animation) in &mut query {
         let npc_tile =
             tile_map.camera_to_tile(tile_map_transform.translation, npc_transform.translation);
 
@@ -113,6 +120,7 @@ fn npc_ai(
         match &npc.behavior {
             Behavior::Idle => {
                 println!("Update to request");
+                animation.stop_animation();
                 // find a container
                 let containers = all_containers(&tile_map, &interactable_query, &tile_query);
                 let dest = if containers.len() > 0 {
@@ -152,8 +160,9 @@ fn npc_ai(
                 if let Some(holding) = std::mem::replace(&mut player.holding, None) {
                     commands.entity(holding).remove_parent().despawn();
                 }
+                animation.start_animation(&Animation::new(&[4, 5, 6, 7], 0.3, false));
                 npc.behavior = Behavior::Idle;
-                npc.timer = Timer::from_seconds(0.5, TimerMode::Once);
+                npc.timer = Timer::from_seconds(3.5, TimerMode::Once);
             }
             _ => {}
         }
