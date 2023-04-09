@@ -97,6 +97,20 @@ impl TileMap {
         }
     }
 
+    pub fn find_tile(&self, entity: Entity) -> Option<IVec2> {
+        for x in 0..self.size.x {
+            for y in 0..self.size.y {
+                let vec = IVec2::new(x, y);
+                if let Some(tile_entity) = self.tiles[self.tile_index(vec)] {
+                    if entity == tile_entity {
+                        return Some(vec);
+                    }
+                }
+            }
+        }
+        None
+    }
+
     fn tile_index(&self, point: IVec2) -> usize {
         (point.x + (point.y * self.size.x)) as usize
     }

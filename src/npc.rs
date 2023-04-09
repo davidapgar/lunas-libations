@@ -1,5 +1,5 @@
 use crate::loading::TextureAssets;
-use crate::player::{Item, Player};
+use crate::player::{Interactable, Item, Player};
 use crate::tilemap::TileMap;
 use crate::GameState;
 use bevy::prelude::*;
@@ -89,6 +89,7 @@ fn npc_ai(
     time: Res<Time>,
     mut query: Query<(Entity, &mut NPC, &mut Player, &Transform)>,
     tile_map_query: Query<(&TileMap, &Transform)>,
+    interactable_query: Query<(Entity, &Interactable, &Parent)>,
 ) {
     let (tile_map, tile_map_transform) = tile_map_query.single();
 
@@ -104,8 +105,18 @@ fn npc_ai(
         match &npc.behavior {
             Behavior::Idle => {
                 println!("Update to request");
+                // find a container
+                let mut dest: Option<IVec2> = None;
+                for (_, interactable, parent) in &interactable_query {
+                    if let Interactable::Container(_) = interactable {
+                        if let Some(location) = tile_map.find_tile(parent.get()) {
+                            dest = Some(location - IVec2::new(0, 1));
+                            break;
+                        }
+                    }
+                }
                 npc.behavior = Behavior::Request(Item::Banana);
-                npc.move_to = Some(npc_tile + IVec2::new(0, 5));
+                npc.move_to = dest;
                 player.request(Item::Banana, entity, &mut commands, &textures);
             }
             Behavior::Request(_item) => {
