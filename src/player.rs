@@ -423,7 +423,7 @@ fn move_player(
 
         if let Some(tile_entity) = tile_map.tile_at(new_tile) {
             if let Ok((tile, _transform)) = tile_query.get(tile_entity) {
-                if let Passable::Passable = tile.0 {
+                if let Passable::Passable = tile.passable() {
                     player_transform.translation += movement;
                     player_transform.translation.z = tile_map.tile_z(&new_tile) + 0.5;
                 }

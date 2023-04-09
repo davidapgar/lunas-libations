@@ -14,18 +14,43 @@ pub const WORLD_SIZE: IVec2 = IVec2::new(
 
 pub struct WorldPlugin;
 
-#[derive(Component, Default)]
-pub struct Tile(pub Passable);
+#[derive(Component)]
+pub enum Tile {
+    Floor,
+    Bar,
+    BarBack,
+    Table,
+}
+
+impl Default for Tile {
+    fn default() -> Self {
+        Tile::Floor
+    }
+}
+
+impl Tile {
+    pub fn passable(&self) -> Passable {
+        match self {
+            Tile::Floor => Passable::Passable,
+            Tile::Bar => Passable::Blocking,
+            Tile::BarBack => Passable::Blocking,
+            Tile::Table => Passable::Blocking,
+        }
+    }
+
+    fn texture(&self, textures: &Res<TextureAssets>) -> Handle<Image> {
+        match self {
+            Tile::Floor => textures.floor1.clone(),
+            Tile::Bar => textures.bar.clone(),
+            Tile::BarBack => textures.barback.clone(),
+            Tile::Table => textures.table.clone(),
+        }
+    }
+}
 
 pub enum Passable {
     Passable,
     Blocking,
-}
-
-impl Default for Passable {
-    fn default() -> Self {
-        Passable::Passable
-    }
 }
 
 // World is 50x40 tiles (800x600 configured window size).
@@ -84,7 +109,7 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
     let y = 16;
     for x in 4..20 {
         let position = IVec2::new(x, y);
-        let id = spawn_tile(&mut commands, textures.barback.clone(), Passable::Blocking);
+        let id = spawn_tile(&mut commands, &textures, Tile::BarBack);
         if x == 12 {
             let spawner = Interactable::Spawner(Item::Banana).spawn(
                 Vec3::new(0., 16., 0.5),
@@ -131,7 +156,7 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
     let y = 12;
     for x in 4..20 {
         let position = IVec2::new(x, y);
-        let id = spawn_tile(&mut commands, textures.bar.clone(), Passable::Blocking);
+        let id = spawn_tile(&mut commands, &textures, Tile::Bar);
         if x == 6 {
             let mixer = Interactable::Mixer(Mixer::new()).spawn(
                 Vec3::new(0., 16., 0.5),
@@ -169,7 +194,7 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
             if y == 4 && (x == 4 || x == 8 || x == 12 || x == 16 || x == 20) {
                 tile_map.insert(
                     tile_map_id,
-                    spawn_tile(&mut commands, textures.table.clone(), Passable::Blocking),
+                    spawn_tile(&mut commands, &textures, Tile::Table),
                     position,
                     &mut commands,
                 );
@@ -189,19 +214,19 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
 }
 
 fn spawn_floor(commands: &mut Commands, textures: &Res<TextureAssets>) -> Entity {
-    spawn_tile(commands, textures.floor1.clone(), Passable::Passable)
+    spawn_tile(commands, textures, Tile::Floor)
 }
 
 // Camera defaults to center of screen being 0.0/0.0
 // So tile 0,0 (top left) will be at -25*16/20*16
 // tile 50,40 will be at 25*16/-20*16
 // tile at 25,20 will be at 0/0
-fn spawn_tile(commands: &mut Commands, texture: Handle<Image>, passable: Passable) -> Entity {
+fn spawn_tile(commands: &mut Commands, textures: &Res<TextureAssets>, tile: Tile) -> Entity {
     let translation = Vec3::splat(0.);
     commands
         .spawn((
             SpriteBundle {
-                texture,
+                texture: tile.texture(textures),
                 transform: Transform::from_translation(translation),
                 sprite: Sprite {
                     anchor: bevy::sprite::Anchor::BottomLeft,
@@ -209,7 +234,7 @@ fn spawn_tile(commands: &mut Commands, texture: Handle<Image>, passable: Passabl
                 },
                 ..default()
             },
-            Tile(passable),
+            tile,
         ))
         .id()
 }

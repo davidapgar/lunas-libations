@@ -1,6 +1,7 @@
 use crate::loading::TextureAssets;
 use crate::player::{Interactable, Item, Player, PlayerHeading};
 use crate::tilemap::TileMap;
+use crate::world::Tile;
 use crate::GameState;
 use bevy::prelude::*;
 
@@ -94,6 +95,7 @@ fn npc_ai(
     mut query: Query<(Entity, &mut NPC, &mut Player, &Transform)>,
     tile_map_query: Query<(&TileMap, &Transform)>,
     interactable_query: Query<(Entity, &Interactable, &Parent)>,
+    tile_query: Query<(&Tile, &Children)>,
 ) {
     let (tile_map, tile_map_transform) = tile_map_query.single();
 
