@@ -70,6 +70,24 @@ pub struct Stats {
     pub drunk: f32,
 }
 
+impl std::ops::Add for Stats {
+    type Output = Self;
+
+    fn add(self, other: Self) -> Self {
+        Self {
+            quench: self.quench + other.quench,
+            mood: self.mood + other.mood,
+            drunk: self.drunk + other.drunk,
+        }
+    }
+}
+
+impl std::ops::AddAssign for Stats {
+    fn add_assign(&mut self, other: Self) {
+        *self = *self + other;
+    }
+}
+
 enum Behavior {
     Idle,
     Request(Item),
@@ -96,6 +114,16 @@ fn update_npc_stats(time: Res<Time>, mut npc_query: Query<&mut NPC>) {
         npc.stats.quench = npc.stats.quench - (npc.stats.quench * delta * 0.20) - (delta * 2.0);
         npc.stats.mood = npc.stats.mood - (npc.stats.mood * delta * 0.10) - (delta * 1.0);
         npc.stats.drunk = npc.stats.quench - (npc.stats.quench * delta * 0.05) - (delta * 0.1);
+    }
+}
+
+fn npc_consume_drink(npc: &mut NPC, item: Item) {
+    if let Item::Beverage(beverage) = item {
+        npc.stats += beverage.stats;
+    } else {
+        npc.stats.quench -= 10.;
+        npc.stats.mood -= 5.;
+        npc.stats.drunk -= 3.;
     }
 }
 

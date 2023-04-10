@@ -280,7 +280,7 @@ pub enum Item {
 
 #[derive(Clone)]
 pub struct Beverage {
-    stats: Stats,
+    pub stats: Stats,
 }
 
 impl Item {
