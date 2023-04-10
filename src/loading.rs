@@ -54,10 +54,16 @@ pub struct TextureAssets {
     pub orange: Handle<Image>,
     #[asset(path = "textures/banana-16x8.png")]
     pub banana: Handle<Image>,
+    #[asset(path = "textures/cherry-16x8.png")]
+    pub cherry: Handle<Image>,
     #[asset(path = "textures/bowl-empty-16x8.png")]
     pub bowl_empty: Handle<Image>,
     #[asset(path = "textures/bowl-filled-16x8.png")]
     pub bowl_filled: Handle<Image>,
+    #[asset(path = "textures/bowl-filled-orange-16x8.png")]
+    pub bowl_filled_orange: Handle<Image>,
+    #[asset(path = "textures/bowl-filled-cherry-16x8.png")]
+    pub bowl_filled_cherry: Handle<Image>,
     #[asset(path = "textures/beverage-16x8.png")]
     pub beverage: Handle<Image>,
     #[asset(path = "textures/trash-16x8.png")]

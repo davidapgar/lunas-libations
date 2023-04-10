@@ -118,6 +118,22 @@ fn spawn_world_tiles(mut commands: Commands, textures: Res<TextureAssets>) {
             );
             commands.entity(id).add_child(spawner);
         }
+        if x == 10 {
+            let spawner = Interactable::Spawner(Item::Orange).spawn(
+                Vec3::new(0., 16., 0.5),
+                &mut commands,
+                &textures,
+            );
+            commands.entity(id).add_child(spawner);
+        }
+        if x == 14 {
+            let spawner = Interactable::Spawner(Item::Cherry).spawn(
+                Vec3::new(0., 16., 0.5),
+                &mut commands,
+                &textures,
+            );
+            commands.entity(id).add_child(spawner);
+        }
         if x == 6 {
             let trash =
                 Interactable::Trash.spawn(Vec3::new(0., 16., 0.5), &mut commands, &textures);

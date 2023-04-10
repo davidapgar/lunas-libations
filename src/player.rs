@@ -115,7 +115,12 @@ pub enum Interactable {
 impl Interactable {
     fn texture(&self, texture_assets: &Res<TextureAssets>) -> Handle<Image> {
         match self {
-            Interactable::Spawner(_) => texture_assets.bowl_filled.clone(),
+            Interactable::Spawner(item) => match item {
+                Item::Banana => texture_assets.bowl_filled.clone(),
+                Item::Orange => texture_assets.bowl_filled_orange.clone(),
+                Item::Cherry => texture_assets.bowl_filled_cherry.clone(),
+                _ => texture_assets.bowl_filled.clone(),
+            },
             Interactable::Mixer(_) => texture_assets.mixer.clone(),
             Interactable::Container(_) => texture_assets.bowl_empty.clone(),
             Interactable::Trash => texture_assets.trash.clone(),
@@ -282,6 +287,7 @@ impl Container {
 pub enum Item {
     Orange,
     Banana,
+    Cherry,
     Beverage(Beverage),
 }
 
@@ -303,6 +309,7 @@ impl Item {
         match self {
             Item::Orange => texture_assets.orange.clone(),
             Item::Banana => texture_assets.banana.clone(),
+            Item::Cherry => texture_assets.cherry.clone(),
             Item::Beverage(_) => texture_assets.beverage.clone(),
         }
     }
