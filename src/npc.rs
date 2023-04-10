@@ -1,4 +1,5 @@
 use crate::animate::{Animation, AnimationComponent};
+use crate::audio::SoundStates;
 use crate::loading::TextureAssets;
 use crate::player::{Beverage, Interactable, Item, Player, PlayerHeading};
 use crate::score::Score;
@@ -188,6 +189,7 @@ fn npc_ai(
     textures: Res<TextureAssets>,
     time: Res<Time>,
     mut score: ResMut<Score>,
+    mut sound_states: ResMut<SoundStates>,
     npc_animations_query: Query<&NPCAnimations>,
     mut query: Query<(
         Entity,
@@ -215,7 +217,7 @@ fn npc_ai(
 
         match &npc.behavior {
             Behavior::Idle => {
-                println!("Update to request");
+                sound_states.drinking = false;
                 match npc_decide_next_action(&npc) {
                     Behavior::Request(_) => {
                         npc_to_request(
@@ -281,6 +283,7 @@ fn npc_ai(
                 println!("Drink");
                 npc_start_drinking(
                     &mut commands,
+                    &mut sound_states,
                     &mut npc,
                     &mut player,
                     &mut animation,
@@ -379,6 +382,7 @@ fn npc_to_drink(
 
 fn npc_start_drinking(
     commands: &mut Commands,
+    sound_states: &mut ResMut<SoundStates>,
     npc: &mut NPC,
     player: &mut Player,
     animation: &mut AnimationComponent,
@@ -392,6 +396,7 @@ fn npc_start_drinking(
         commands.entity(holding).remove_parent().despawn();
     }
     animation.start_animation(&npc_animations.drink);
+    sound_states.drinking = true;
     npc.behavior = Behavior::Idle;
     npc.timer = Timer::from_seconds(3.5, TimerMode::Once);
 }

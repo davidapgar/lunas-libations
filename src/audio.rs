@@ -10,6 +10,7 @@ pub struct InternalAudioPlugin;
 impl Plugin for InternalAudioPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(AudioPlugin)
+            .init_resource::<SoundStates>()
             .add_system(start_audio.in_schedule(OnEnter(GameState::Playing)))
             .add_system(
                 control_flying_sound
@@ -20,7 +21,20 @@ impl Plugin for InternalAudioPlugin {
 }
 
 #[derive(Resource)]
+pub struct SoundStates {
+    pub drinking: bool,
+}
+
+impl Default for SoundStates {
+    fn default() -> Self {
+        SoundStates { drinking: false }
+    }
+}
+
+#[derive(Resource)]
 struct BackgroundAudio(Handle<AudioInstance>);
+#[derive(Resource)]
+struct DrinkingAudio(Handle<AudioInstance>);
 
 fn start_audio(mut commands: Commands, audio_assets: Res<AudioAssets>, audio: Res<Audio>) {
     audio.pause();
@@ -30,22 +44,29 @@ fn start_audio(mut commands: Commands, audio_assets: Res<AudioAssets>, audio: Re
         .with_volume(0.3)
         .handle();
     commands.insert_resource(BackgroundAudio(handle));
+
+    let handle = audio
+        .play(audio_assets.drinking.clone())
+        .looped()
+        .with_volume(0.3)
+        .handle();
+    commands.insert_resource(DrinkingAudio(handle));
 }
 
 fn control_flying_sound(
-    actions: Res<Actions>,
-    audio: Res<BackgroundAudio>,
+    sound_states: Res<SoundStates>,
+    audio: Res<DrinkingAudio>,
     mut audio_instances: ResMut<Assets<AudioInstance>>,
 ) {
     if let Some(instance) = audio_instances.get_mut(&audio.0) {
         match instance.state() {
             PlaybackState::Paused { .. } => {
-                if actions.player_movement.is_some() {
+                if sound_states.drinking {
                     instance.resume(AudioTween::default());
                 }
             }
             PlaybackState::Playing { .. } => {
-                if actions.player_movement.is_none() {
+                if !sound_states.drinking {
                     instance.pause(AudioTween::default());
                 }
             }
