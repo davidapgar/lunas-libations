@@ -1,6 +1,7 @@
 use crate::animate::{Animation, AnimationComponent};
 use crate::loading::TextureAssets;
 use crate::player::{Beverage, Interactable, Item, Player, PlayerHeading};
+use crate::score::Score;
 use crate::tilemap::TileMap;
 use crate::world::Tile;
 use crate::GameState;
@@ -186,6 +187,7 @@ fn npc_ai(
     mut commands: Commands,
     textures: Res<TextureAssets>,
     time: Res<Time>,
+    mut score: ResMut<Score>,
     npc_animations_query: Query<&NPCAnimations>,
     mut query: Query<(
         Entity,
@@ -229,18 +231,25 @@ fn npc_ai(
                         );
                     }
                     Behavior::Chat => {
+                        score.value += 10;
                         npc_to_chat(&mut npc);
                     }
                     Behavior::Fight => {
+                        score.value -= 20;
                         npc_to_fight(&mut npc);
                     }
                     Behavior::Dance => {
+                        score.value += 50;
                         npc_to_dance(&mut npc);
                     }
                     Behavior::Cry => {
+                        score.value -= 10;
                         npc_to_cry(&mut npc);
                     }
-                    Behavior::Puke => npc_to_puke(&mut npc),
+                    Behavior::Puke => {
+                        score.value -= 50;
+                        npc_to_puke(&mut npc);
+                    }
                     _ => {}
                 }
             }

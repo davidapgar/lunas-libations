@@ -5,6 +5,7 @@ mod loading;
 mod menu;
 mod npc;
 mod player;
+mod score;
 mod tilemap;
 mod world;
 
@@ -15,6 +16,7 @@ use crate::loading::LoadingPlugin;
 use crate::menu::MenuPlugin;
 use crate::npc::NPCPlugin;
 use crate::player::PlayerPlugin;
+use crate::score::ScorePlugin;
 use crate::world::WorldPlugin;
 
 use bevy::app::App;
@@ -49,6 +51,7 @@ impl Plugin for GamePlugin {
             .add_plugin(InternalAudioPlugin)
             .add_plugin(PlayerPlugin)
             .add_plugin(NPCPlugin)
+            .add_plugin(ScorePlugin)
             .add_plugin(WorldPlugin);
 
         #[cfg(debug_assertions)]
