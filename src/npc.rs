@@ -402,6 +402,7 @@ fn npc_start_drinking(
 }
 
 fn npc_to_chat(npc: &mut NPC) {
+    move_to_random_space(npc);
     npc.behavior = Behavior::Chat;
 }
 
@@ -416,6 +417,7 @@ fn npc_start_chat(
 }
 
 fn npc_to_fight(npc: &mut NPC) {
+    move_to_random_space(npc);
     npc.behavior = Behavior::Fight;
 }
 
@@ -430,6 +432,7 @@ fn npc_start_fight(
 }
 
 fn npc_to_dance(npc: &mut NPC) {
+    move_to_random_space(npc);
     npc.behavior = Behavior::Dance;
 }
 
@@ -444,6 +447,7 @@ fn npc_start_dance(
 }
 
 fn npc_to_cry(npc: &mut NPC) {
+    move_to_random_space(npc);
     npc.behavior = Behavior::Cry;
 }
 
@@ -458,6 +462,7 @@ fn npc_start_cry(
 }
 
 fn npc_to_puke(npc: &mut NPC) {
+    move_to_random_space(npc);
     npc.behavior = Behavior::Puke;
 }
 
@@ -469,6 +474,12 @@ fn npc_start_puke(
     animation.start_animation(&npc_animations.puke);
     npc.behavior = Behavior::Idle;
     npc.timer = Timer::from_seconds(6.0, TimerMode::Once);
+}
+
+fn move_to_random_space(npc: &mut NPC) {
+    let mut rng = thread_rng();
+    let tile = IVec2::new(rng.gen_range(4..20), rng.gen_range(5..10));
+    npc.move_to = Some(tile);
 }
 
 fn all_containers(
