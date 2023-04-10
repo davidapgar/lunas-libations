@@ -1,6 +1,6 @@
 use crate::animate::{Animation, AnimationComponent};
 use crate::loading::TextureAssets;
-use crate::player::{Interactable, Item, Player, PlayerHeading};
+use crate::player::{Beverage, Interactable, Item, Player, PlayerHeading};
 use crate::tilemap::TileMap;
 use crate::world::Tile;
 use crate::GameState;
@@ -60,7 +60,7 @@ pub struct NPC {
     timer: Timer,
 }
 
-#[derive(Default, Copy, Clone)]
+#[derive(Default, Copy, Clone, Debug)]
 pub struct Stats {
     /// How quenched or thirsty. Negative is thirsy
     pub quench: f32,
@@ -111,19 +111,50 @@ fn update_npc_stats(time: Res<Time>, mut npc_query: Query<&mut NPC>) {
     for mut npc in &mut npc_query {
         // TODO: Tune these. They drop a percentage of the value towards zero, then also a
         // constant.
+        /*
         npc.stats.quench = npc.stats.quench - (npc.stats.quench * delta * 0.20) - (delta * 2.0);
         npc.stats.mood = npc.stats.mood - (npc.stats.mood * delta * 0.10) - (delta * 1.0);
-        npc.stats.drunk = npc.stats.quench - (npc.stats.quench * delta * 0.05) - (delta * 0.1);
+        npc.stats.drunk = npc.stats.drunk - (npc.stats.drunk * delta * 0.05) - (delta * 0.1);
+        */
+        npc.stats.quench = npc.stats.quench - (delta * 0.5);
+        npc.stats.mood = npc.stats.mood - (delta * 0.3);
+        npc.stats.drunk = npc.stats.drunk - (delta * 0.1);
+        if npc.stats.quench < 0. {
+            npc.stats.quench = 0.;
+        }
     }
 }
 
-fn npc_consume_drink(npc: &mut NPC, item: Item) {
+fn npc_consume_drink(npc: &mut NPC, item: &Item) {
     if let Item::Beverage(beverage) = item {
         npc.stats += beverage.stats;
     } else {
         npc.stats.quench -= 10.;
         npc.stats.mood -= 5.;
         npc.stats.drunk -= 3.;
+    }
+}
+
+fn npc_decide_next_action(npc: &NPC) -> Behavior {
+    println!("Decide action, current NPC stats: {:?}", npc.stats);
+    if npc.stats.quench <= 10. {
+        return Behavior::Request(Item::Beverage(Beverage::default()));
+    }
+
+    if npc.stats.drunk < 30. {
+        if npc.stats.mood < 0. {
+            Behavior::Cry
+        } else {
+            Behavior::Chat
+        }
+    } else if npc.stats.drunk < 60. {
+        if npc.stats.mood < 0. {
+            Behavior::Fight
+        } else {
+            Behavior::Dance
+        }
+    } else {
+        Behavior::Puke
     }
 }
 
@@ -166,6 +197,7 @@ fn npc_ai(
     tile_map_query: Query<(&TileMap, &Transform)>,
     interactable_query: Query<(Entity, &Interactable, &Parent)>,
     tile_query: Query<(&Tile, Option<&Children>)>,
+    item_query: Query<&Item>,
 ) {
     let (tile_map, tile_map_transform) = tile_map_query.single();
     let npc_animations = npc_animations_query.single();
@@ -182,17 +214,35 @@ fn npc_ai(
         match &npc.behavior {
             Behavior::Idle => {
                 println!("Update to request");
-                npc_to_request(
-                    &mut commands,
-                    &textures,
-                    entity,
-                    &mut npc,
-                    &mut player,
-                    &mut animation,
-                    tile_map,
-                    &interactable_query,
-                    &tile_query,
-                );
+                match npc_decide_next_action(&npc) {
+                    Behavior::Request(_) => {
+                        npc_to_request(
+                            &mut commands,
+                            &textures,
+                            entity,
+                            &mut npc,
+                            &mut player,
+                            &mut animation,
+                            tile_map,
+                            &interactable_query,
+                            &tile_query,
+                        );
+                    }
+                    Behavior::Chat => {
+                        npc_to_chat(&mut npc);
+                    }
+                    Behavior::Fight => {
+                        npc_to_fight(&mut npc);
+                    }
+                    Behavior::Dance => {
+                        npc_to_dance(&mut npc);
+                    }
+                    Behavior::Cry => {
+                        npc_to_cry(&mut npc);
+                    }
+                    Behavior::Puke => npc_to_puke(&mut npc),
+                    _ => {}
+                }
             }
             Behavior::Request(_item) => {
                 if let None = npc.move_to {
@@ -222,11 +272,11 @@ fn npc_ai(
                 println!("Drink");
                 npc_start_drinking(
                     &mut commands,
-                    entity,
                     &mut npc,
                     &mut player,
                     &mut animation,
                     npc_animations,
+                    &item_query,
                 );
             }
             Behavior::Chat => {
@@ -289,7 +339,12 @@ fn npc_to_request(
         None
     };
     npc.move_to = dest;
-    player.request(Item::Banana, entity, commands, textures);
+    player.request(
+        Item::Beverage(Beverage::default()),
+        entity,
+        commands,
+        textures,
+    );
     npc.behavior = Behavior::Request(Item::Banana);
 }
 
@@ -315,13 +370,16 @@ fn npc_to_drink(
 
 fn npc_start_drinking(
     commands: &mut Commands,
-    entity: Entity,
     npc: &mut NPC,
     player: &mut Player,
     animation: &mut AnimationComponent,
     npc_animations: &NPCAnimations,
+    item_query: &Query<&Item>,
 ) {
     if let Some(holding) = std::mem::replace(&mut player.holding, None) {
+        if let Ok(item) = item_query.get(holding) {
+            npc_consume_drink(npc, item);
+        }
         commands.entity(holding).remove_parent().despawn();
     }
     animation.start_animation(&npc_animations.drink);

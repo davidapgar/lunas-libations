@@ -6,6 +6,7 @@ use crate::tilemap::TileMap;
 use crate::world::{Passable, Tile, SCALE};
 use crate::GameState;
 use bevy::prelude::*;
+use rand::prelude::*;
 
 pub struct PlayerPlugin;
 
@@ -246,9 +247,15 @@ impl Mixer {
 
     pub fn mix(&mut self) -> bool {
         if self.contains.len() > 0 {
+            let mut rng = thread_rng();
+
             self.contains.clear();
             self.result = Some(Item::Beverage(Beverage {
-                stats: Stats::default(),
+                stats: Stats {
+                    quench: 20. + rng.gen_range(-4.0..4.0),
+                    mood: 10. + rng.gen_range(-4.0..4.0),
+                    drunk: 14. + rng.gen_range(0.0..6.0),
+                },
             }));
             true
         } else {
@@ -281,6 +288,14 @@ pub enum Item {
 #[derive(Clone)]
 pub struct Beverage {
     pub stats: Stats,
+}
+
+impl Default for Beverage {
+    fn default() -> Self {
+        Self {
+            stats: Stats::default(),
+        }
+    }
 }
 
 impl Item {
