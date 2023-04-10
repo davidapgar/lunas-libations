@@ -254,14 +254,30 @@ impl Mixer {
         if self.contains.len() > 0 {
             let mut rng = thread_rng();
 
+            let mut stats = Stats::default();
+            for item in &self.contains {
+                match item {
+                    Item::Orange => {
+                        stats.quench += 20. + rng.gen_range(-4.0..4.0);
+                        stats.mood += 5. + rng.gen_range(-1.2..1.8);
+                        stats.drunk += 4. + rng.gen_range(-2.0..4.0);
+                    }
+                    Item::Banana => {
+                        stats.quench += 10. + rng.gen_range(-1.2..1.8);
+                        stats.mood += 10. + rng.gen_range(-0.8..2.2);
+                        stats.drunk += 12. + rng.gen_range(-4.0..4.0);
+                    }
+                    Item::Cherry => {
+                        stats.quench += 5. + rng.gen_range(-1.2..1.8);
+                        stats.mood += 15. + rng.gen_range(-4.2..6.8);
+                        stats.drunk += 17. + rng.gen_range(-4.0..4.0);
+                    }
+                    _ => {}
+                }
+            }
+
             self.contains.clear();
-            self.result = Some(Item::Beverage(Beverage {
-                stats: Stats {
-                    quench: 20. + rng.gen_range(-4.0..4.0),
-                    mood: 10. + rng.gen_range(-4.0..4.0),
-                    drunk: 14. + rng.gen_range(0.0..6.0),
-                },
-            }));
+            self.result = Some(Item::Beverage(Beverage { stats }));
             true
         } else {
             false

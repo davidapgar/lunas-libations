@@ -118,8 +118,8 @@ fn update_npc_stats(time: Res<Time>, mut npc_query: Query<&mut NPC>) {
         npc.stats.mood = npc.stats.mood - (npc.stats.mood * delta * 0.10) - (delta * 1.0);
         npc.stats.drunk = npc.stats.drunk - (npc.stats.drunk * delta * 0.05) - (delta * 0.1);
         */
-        npc.stats.quench = npc.stats.quench - (delta * 0.5);
-        npc.stats.mood = npc.stats.mood - (delta * 0.3);
+        npc.stats.quench = npc.stats.quench - (delta * 1.0);
+        npc.stats.mood = npc.stats.mood - (delta * 0.2);
         npc.stats.drunk = npc.stats.drunk - (delta * 0.1);
         if npc.stats.quench < 0. {
             npc.stats.quench = 0.;
@@ -218,6 +218,7 @@ fn npc_ai(
         match &npc.behavior {
             Behavior::Idle => {
                 sound_states.drinking = false;
+                sound_states.chatting = false;
                 match npc_decide_next_action(&npc) {
                     Behavior::Request(_) => {
                         npc_to_request(
@@ -296,7 +297,7 @@ fn npc_ai(
                     continue;
                 };
                 println!("Chat");
-                npc_start_chat(&mut npc, &mut animation, npc_animations);
+                npc_start_chat(&mut npc, &mut sound_states, &mut animation, npc_animations);
             }
             Behavior::Fight => {
                 let None = npc.move_to else {
@@ -408,10 +409,12 @@ fn npc_to_chat(npc: &mut NPC) {
 
 fn npc_start_chat(
     npc: &mut NPC,
+    sound_states: &mut ResMut<SoundStates>,
     animation: &mut AnimationComponent,
     npc_animations: &NPCAnimations,
 ) {
     animation.start_animation(&npc_animations.talk_right);
+    sound_states.chatting = true;
     npc.behavior = Behavior::Idle;
     npc.timer = Timer::from_seconds(6.5, TimerMode::Once);
 }
