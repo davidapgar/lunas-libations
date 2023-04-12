@@ -15,7 +15,6 @@ fn main() {
                     primary_window: Some(Window {
                         title: "Luna's Libations".to_string(),
                         resolution: (800., 600.).into(),
-                        canvas: Some("#bevy".to_owned()),
                         ..default()
                     }),
                     ..default()
